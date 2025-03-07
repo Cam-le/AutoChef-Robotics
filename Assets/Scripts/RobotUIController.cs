@@ -145,4 +145,34 @@ public class RobotUIController : MonoBehaviour
             }
         }
     }
+    // Add these to RobotUIController
+    public void OnJoint1SliderChanged(float value)
+    {
+        robotController.SetJointAngle(0, value);
+    }
+
+    public void OnJoint2SliderChanged(float value)
+    {
+        robotController.SetJointAngle(1, value);
+    }
+
+    public void OnJoint3SliderChanged(float value)
+    {
+        robotController.SetJointAngle(2, value);
+    }
+
+    public void OnJoint4SliderChanged(float value)
+    {
+        robotController.SetJointAngle(3, value);
+    }
+
+    public void OnJoint5SliderChanged(float value)
+    {
+        robotController.SetJointAngle(4, value);
+    }
+
+    public void OnJoint6SliderChanged(float value)
+    {
+        robotController.SetJointAngle(5, value);
+    }
 }
