@@ -1648,7 +1648,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 196304799}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.34, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 740650604}
@@ -3526,6 +3526,7 @@ GameObject:
   - component: {fileID: 528904325}
   - component: {fileID: 528904324}
   - component: {fileID: 528904323}
+  - component: {fileID: 528904326}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -3592,12 +3593,31 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 528904322}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.3, y: 0.71, z: -0.76}
+  m_LocalPosition: {x: 0, y: 0.45, z: -0.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &528904326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 528904322}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2545b4c10ad53bf40ab3f06959dbbed3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panSpeed: 20
+  zoomSpeed: 10
+  rotationSpeed: 100
+  minZoomDistance: 0.5
+  maxZoomDistance: 10
+  minVerticalAngle: -80
+  maxVerticalAngle: 80
 --- !u!1 &536959117
 GameObject:
   m_ObjectHideFlags: 0
@@ -6204,7 +6224,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1027626624}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.06298828, z: 0}
+  m_LocalPosition: {x: 0, y: -0.23, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2097758295}
@@ -6224,11 +6244,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8a881166a5802e7468f8f685b6a4a9d1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jointArticulationBodies: []
+  jointArticulationBodies:
+  - {fileID: 1324217886}
+  - {fileID: 45020794}
+  - {fileID: 1592473713}
+  - {fileID: 416201477}
+  - {fileID: 1730773132}
+  - {fileID: 1722110683}
   jointSpeed: 30
   jointAcceleration: 10
-  leftGripper: {fileID: 0}
-  rightGripper: {fileID: 0}
+  leftGripper: {fileID: 2115363624}
+  rightGripper: {fileID: 789906912}
   gripperOpenAngle: 35
   gripperClosedAngle: 0
   OnGripperOpen:
@@ -8902,9 +8928,9 @@ ArticulationBody:
   m_Enabled: 1
   m_Mass: 1
   m_ParentAnchorPosition: {x: 0, y: 0, z: 0.21000004}
-  m_ParentAnchorRotation: {x: -0.50000006, y: 0.50000006, z: -0.50000006, w: 0.50000006}
+  m_ParentAnchorRotation: {x: 0.5, y: -0.5, z: 0.5, w: -0.5}
   m_AnchorPosition: {x: 0, y: 0, z: 0}
-  m_AnchorRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
+  m_AnchorRotation: {x: 0, y: 0, z: 0.70710677, w: -0.70710677}
   m_ComputeParentAnchor: 1
   m_ArticulationJointType: 2
   m_LinearX: 1
