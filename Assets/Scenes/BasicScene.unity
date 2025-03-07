@@ -3611,9 +3611,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2545b4c10ad53bf40ab3f06959dbbed3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  panSpeed: 20
+  panSpeed: 2
   zoomSpeed: 10
-  rotationSpeed: 100
+  rotationSpeed: 50
   minZoomDistance: 0.5
   maxZoomDistance: 10
   minVerticalAngle: -80
