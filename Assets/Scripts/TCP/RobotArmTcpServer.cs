@@ -1,296 +1,238 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
+﻿using UnityEngine;
+using System;
 using System.Text;
+using System.Threading.Tasks;
+using System.Net.Http;
+using System.Collections.Generic;
 using System.Threading;
-using UnityEngine;
+using UnityEngine.UI;
+using Newtonsoft.Json;
 
 public class RobotArmTcpServer : MonoBehaviour
 {
-    [Header("TCP Settings")]
-    public int port = 5000;
-    public bool startServerOnAwake = true;
-    public bool displayDebugInfo = true;
+    [Header("API Configuration")]
+    //[SerializeField]
+    //private string apiBaseUrl = "https://your-azure-api.azurewebsites.net/api";
 
-    [Header("Connection Info")]
-    [SerializeField] private string serverIP = "Not available";
-    [SerializeField] private bool isListening = false;
-    [SerializeField] private int connectedClients = 0;
+    [SerializeField]
+    private int pollIntervalSeconds = 5;
 
-    private TcpListener listener;
-    private Thread serverThread;
-    private bool isRunning = false;
-    private object _lockObject = new object();
+    [Header("Processing Time Simulation")]
+    [SerializeField]
+    private float prepareIngredientsTime = 3.0f;
 
-    // Queue for thread-safe logging
-    private Queue<string> logQueue = new Queue<string>();
-    // Queue for commands to be processed on the main thread
-    private Queue<string> commandQueue = new Queue<string>();
+    [SerializeField]
+    private float cookingTime = 5.0f;
 
-    void Awake()
+    [SerializeField]
+    private float finishingTime = 2.0f;
+
+    [Header("Robot References")]
+    [SerializeField]
+    private Transform robotArm;
+
+    [SerializeField]
+    private Text statusText;
+
+    private HttpClient httpClient;
+    private bool isProcessingOrder = false;
+    private CancellationTokenSource cancellationToken;
+    private Order currentOrder;
+
+    void Start()
     {
-        Application.runInBackground = true; // Allow Unity to run in background
+        httpClient = new HttpClient();
+        StartOrderPolling();
 
-        if (startServerOnAwake)
+        if (statusText != null)
         {
-            StartCoroutine(StartServerDelayed());
+            statusText.text = "Robot sẵn sàng - đang chờ đơn hàng...";
         }
     }
 
-    IEnumerator StartServerDelayed()
+    private void StartOrderPolling()
     {
-        // Wait for a frame to ensure Unity is fully initialized
-        yield return null;
-        StartServer();
+        Debug.Log("Bắt đầu kiểm tra đơn hàng mới...");
+        cancellationToken = new CancellationTokenSource();
+        _ = PollForOrdersAsync(cancellationToken.Token);
     }
 
-    void Update()
+    private async Task PollForOrdersAsync(CancellationToken token)
     {
-        // Process any logs from the background thread
-        lock (_lockObject)
+        while (!token.IsCancellationRequested)
         {
-            while (logQueue.Count > 0)
+            if (!isProcessingOrder)
             {
-                string log = logQueue.Dequeue();
-                if (displayDebugInfo)
+                try
                 {
-                    Debug.Log($"[RobotTcpServer] {log}");
+                    // Gọi API để lấy đơn hàng tiếp theo từ hàng đợi
+                    await FetchAndProcessNextOrder();
                 }
-            }
-        }
-
-        // Process any commands from clients
-        lock (_lockObject)
-        {
-            while (commandQueue.Count > 0)
-            {
-                string command = commandQueue.Dequeue();
-                ProcessCommand(command);
-            }
-        }
-    }
-
-    public void StartServer()
-    {
-        if (isRunning) return;
-
-        try
-        {
-            // Get all IP addresses of this machine
-            IPAddress[] localIPs = Dns.GetHostAddresses(Dns.GetHostName());
-            string ipInfo = "Available IPs:\n";
-            foreach (IPAddress ip in localIPs)
-            {
-                if (ip.AddressFamily == AddressFamily.InterNetwork) // IPv4 only
+                catch (Exception ex)
                 {
-                    ipInfo += $"{ip}\n";
-                    serverIP = ip.ToString(); // Use last found IP
+                    Debug.LogError($"Lỗi khi kiểm tra đơn hàng: {ex.Message}");
                 }
             }
 
-            // Try to start on all interfaces
-            listener = new TcpListener(IPAddress.Any, port);
-            listener.Start();
-
-            isRunning = true;
-            isListening = true;
-
-            // Log on the main thread
-            lock (_lockObject)
-            {
-                logQueue.Enqueue($"Server started on port {port}");
-                logQueue.Enqueue(ipInfo);
-                logQueue.Enqueue($"Connect to this server using: {serverIP}:{port}");
-            }
-
-            // Start the server thread
-            serverThread = new Thread(ListenForClients);
-            serverThread.IsBackground = true;
-            serverThread.Start();
-        }
-        catch (Exception e)
-        {
-            // Log on the main thread
-            lock (_lockObject)
-            {
-                logQueue.Enqueue($"Error starting server: {e.Message}");
-                isListening = false;
-            }
+            // Đợi trước khi kiểm tra lại
+            await Task.Delay(pollIntervalSeconds * 1000, token);
         }
     }
 
-    public void StopServer()
-    {
-        isRunning = false;
-        isListening = false;
-
-        if (listener != null)
-        {
-            listener.Stop();
-            listener = null;
-        }
-
-        if (serverThread != null && serverThread.IsAlive)
-        {
-            serverThread.Join(500); // Wait for thread to finish with timeout
-            serverThread = null;
-        }
-
-        lock (_lockObject)
-        {
-            logQueue.Enqueue("Server stopped");
-        }
-    }
-
-    private void ListenForClients()
-    {
-        while (isRunning)
-        {
-            try
-            {
-                TcpClient client = listener.AcceptTcpClient();
-
-                lock (_lockObject)
-                {
-                    connectedClients++;
-                    logQueue.Enqueue($"Client connected from {((IPEndPoint)client.Client.RemoteEndPoint).Address}");
-                    logQueue.Enqueue($"Active connections: {connectedClients}");
-                }
-
-                Thread clientThread = new Thread(() => HandleClient(client));
-                clientThread.IsBackground = true;
-                clientThread.Start();
-            }
-            catch (SocketException e)
-            {
-                if (isRunning) // Only log if we didn't intentionally stop
-                {
-                    lock (_lockObject)
-                    {
-                        logQueue.Enqueue($"Socket exception: {e.Message}");
-                    }
-                }
-                break;
-            }
-            catch (Exception e)
-            {
-                lock (_lockObject)
-                {
-                    logQueue.Enqueue($"Error accepting client: {e.Message}");
-                }
-                // Small delay to prevent CPU spike in case of repeated errors
-                Thread.Sleep(100);
-            }
-        }
-    }
-
-    private void HandleClient(TcpClient client)
+    private async Task FetchAndProcessNextOrder()
     {
         try
         {
-            using (NetworkStream stream = client.GetStream())
+            // Gọi API để lấy đơn hàng tiếp theo
+            HttpResponseMessage response = await httpClient.GetAsync($"https://autochefsystem.azurewebsites.net/api/Order/receive-from-queue");
+
+            if (response.IsSuccessStatusCode)
             {
-                byte[] buffer = new byte[1024];
-                int bytesRead;
+                string responseContent = await response.Content.ReadAsStringAsync();
 
-                // Set read timeout to prevent hanging
-                stream.ReadTimeout = 30000; // 30 seconds
-
-                while (isRunning && client.Connected && (bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                // Kiểm tra nếu có đơn hàng mới
+                if (!string.IsNullOrEmpty(responseContent) && responseContent != "null")
                 {
-                    string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    // Deserializes chuỗi JSON để lấy message
+                    var apiResponse = JsonConvert.DeserializeObject<ApiResponse>(responseContent); // Sử dụng Newtonsoft.Json
 
-                    // Add to logging queue
-                    lock (_lockObject)
+                    if (apiResponse != null && !string.IsNullOrEmpty(apiResponse.Message))
                     {
-                        logQueue.Enqueue($"Received: {message}");
-                    }
+                        // Deserializes trường message để lấy đối tượng Order
+                        Order order = JsonConvert.DeserializeObject<Order>(apiResponse.Message); // Sử dụng Newtonsoft.Json
 
-                    // Add to command processing queue
-                    lock (_lockObject)
-                    {
-                        commandQueue.Enqueue(message);
+                        if (order != null && order.OrderId > 0)
+                        {
+                            Debug.Log($"Nhận được đơn hàng mới: {order.OrderId}");
+                            await ProcessOrderAsync(order);
+                        }
                     }
-
-                    // Send response
-                    string response = "Command received and queued for processing";
-                    byte[] responseData = Encoding.UTF8.GetBytes(response);
-                    stream.Write(responseData, 0, responseData.Length);
                 }
             }
-        }
-        catch (Exception e)
-        {
-            lock (_lockObject)
+            else if (response.StatusCode != System.Net.HttpStatusCode.NoContent)
             {
-                logQueue.Enqueue($"Error handling client: {e.Message}");
+                // Chỉ log lỗi nếu không phải là NoContent (không có đơn hàng mới)
+                Debug.LogWarning($"Không thể lấy đơn hàng: {response.StatusCode}");
             }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Lỗi gọi API lấy đơn hàng: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessOrderAsync(Order order)
+    {
+        isProcessingOrder = true;
+        currentOrder = order;
+
+        try
+        {
+            // Cập nhật trạng thái "Processing"
+            await UpdateOrderStatus(order.OrderId, "Processing");
+            UpdateStatusText($"Đang xử lý đơn hàng: {order.OrderId}");
+
+            // Mô phỏng robot chế biến đồ ăn
+            await PrepareFood(order);
+
+            // Cập nhật trạng thái "Completed" khi hoàn thành
+            await UpdateOrderStatus(order.OrderId, "Completed");
+            UpdateStatusText($"Đã hoàn thành đơn hàng: {order.OrderId}");
+
+            Debug.Log($"Hoàn thành đơn hàng {order.OrderId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Lỗi xử lý đơn hàng {order.OrderId}: {ex.Message}");
+            await UpdateOrderStatus(order.OrderId, "Failed");
+            UpdateStatusText($"Lỗi khi xử lý đơn hàng: {order.OrderId}");
         }
         finally
         {
-            client.Close();
-            lock (_lockObject)
-            {
-                connectedClients--;
-                logQueue.Enqueue("Client disconnected");
-                logQueue.Enqueue($"Active connections: {connectedClients}");
-            }
+            isProcessingOrder = false;
+            currentOrder = null;
         }
     }
 
-    private void ProcessCommand(string command)
+    private async Task PrepareFood(Order order)
     {
-        // TODO: Implement your robot arm command processing logic here
-        Debug.Log($"Processing command: {command}");
+        // Giả lập robot làm đồ ăn dựa trên các món trong đơn hàng
+        // Bổ sung Items vào Order
+        await Task.Delay((int)(prepareIngredientsTime * 1000)); // Thời gian chuẩn bị
+        await Task.Delay((int)(cookingTime * 1000)); // Thời gian nấu
+        await Task.Delay((int)(finishingTime * 1000)); // Thời gian hoàn thiện
+    }
 
-        // Example: Parse command for robot arm
-        // Format could be "MOVE:Joint1:45.0" to move joint 1 to 45 degrees
+    private async Task UpdateOrderStatus(int orderId, string status)
+    {
         try
         {
-            string[] parts = command.Split(':');
-            if (parts.Length >= 3)
+            var statusUpdate = new StatusUpdateRequest
             {
-                string action = parts[0];
-                string joint = parts[1];
-                float value = float.Parse(parts[2]);
+                OrderId = orderId,
+                Status = status
+            };
+            var content = new StringContent(
+                JsonConvert.SerializeObject(statusUpdate), // Sử dụng Newtonsoft.Json
+                Encoding.UTF8,
+                "application/json"
+            );
 
-                if (action == "MOVE")
-                {
-                    // Call your robot arm control method here
-                    Debug.Log($"Moving {joint} to {value} degrees");
-                    // Example: MoveJoint(joint, value);
-                }
-            }
+            var response = await httpClient.PutAsync(
+                $"https://autochefsystem.azurewebsites.net/api/Order/update-order-status",
+                content
+            );
+
+            response.EnsureSuccessStatusCode();
+            Debug.Log($"Đã cập nhật trạng thái đơn hàng {orderId}: {status}");
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.LogError($"Error processing command: {e.Message}");
+            Debug.LogError($"Lỗi cập nhật trạng thái: {ex.Message}");
+            throw;
         }
     }
 
-    void OnGUI()
+    private void UpdateStatusText(string message)
     {
-        if (displayDebugInfo)
+        if (statusText != null)
         {
-            // Display connection info in top-left corner
-            GUILayout.BeginArea(new Rect(10, 10, 300, 100));
-            GUILayout.Label($"Server IP: {serverIP}");
-            GUILayout.Label($"Port: {port}");
-            GUILayout.Label($"Status: {(isListening ? "Listening" : "Not Listening")}");
-            GUILayout.Label($"Connected Clients: {connectedClients}");
-            GUILayout.EndArea();
+            statusText.text = message;
         }
     }
 
-    void OnApplicationQuit()
+    void OnDestroy()
     {
-        StopServer();
+        // Dừng polling task khi GameObject bị hủy
+        cancellationToken?.Cancel();
     }
 
-    void OnDisable()
+    public class Order
     {
-        StopServer();
+        public int OrderId { get; set; }
+        public int RecipeId { get; set; }
+        public int RobotId { get; set; }
+        public int LocationId { get; set; }
+        public string Status { get; set; }
+        public DateTime OrderedTime { get; set; }
+
+    }
+
+    public class OrderItem
+    {
+        public string ProductId { get; set; }
+        public int Quantity { get; set; }
+        public string Instructions { get; set; }
+    }
+
+    public class ApiResponse
+    {
+        public string Message { get; set; }
+    }
+
+    public class StatusUpdateRequest
+    {
+        public int OrderId { get; set; }
+        public string Status { get; set; }
     }
 }
