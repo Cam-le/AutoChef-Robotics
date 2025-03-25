@@ -91,17 +91,17 @@ public class EnhancedRecipeManager : MonoBehaviour
         {
             if (op != null && !string.IsNullOrEmpty(op.ingredientName))
             {
-                Debug.Log($"Adding ingredient to lookup: {op.ingredientName}");
+                //Debug.Log($"Adding ingredient to lookup: {op.ingredientName}");
                 operationsLookup[op.ingredientName] = op;
             }
         }
 
         // Log all available operations
-        Debug.Log($"Available operations: {operationsLookup.Count}");
-        foreach (var key in operationsLookup.Keys)
-        {
-            Debug.Log($"- {key}");
-        }
+        //Debug.Log($"Available operations: {operationsLookup.Count}");
+        //foreach (var key in operationsLookup.Keys)
+        //{
+        //    Debug.Log($"- {key}");
+        //}
 
         // Set up UI
         SetupUI();
@@ -198,12 +198,16 @@ public class EnhancedRecipeManager : MonoBehaviour
         // Disable all buttons while the robot is moving
         SetButtonsInteractable(false);
 
-        // Process each ingredient
-        for (int i = 0; i < recipe.ingredients.Length; i++)
+        int ingredientCount = recipe.ingredients.Length;
+        Debug.Log($"Starting to process {ingredientCount} ingredients for {recipe.recipeName}");
+
+        // Process each ingredient one by one
+        for (int i = 0; i < ingredientCount; i++)
         {
             string ingredient = recipe.ingredients[i];
-            Debug.Log($"Processing ingredient {i + 1}/{recipe.ingredients.Length}: {ingredient}");
+            Debug.Log($"Processing ingredient {i + 1}/{ingredientCount}: {ingredient}");
 
+            // Check if we have operations for this ingredient
             if (operationsLookup.ContainsKey(ingredient))
             {
                 Debug.Log($"Found operations for {ingredient}");
@@ -215,13 +219,22 @@ public class EnhancedRecipeManager : MonoBehaviour
                     ingredientTaskCounter[ingredient] = 0;
                 }
 
-                // Log and process each step for this ingredient
-                yield return StartCoroutine(ProcessIngredientSteps(ingredient, operations));
+                // Create a flag to track coroutine completion
+                bool stepProcessingComplete = false;
+
+                // Start the ingredient steps processing
+                StartCoroutine(ProcessIngredientStepsWithCompletion(ingredient, operations, () => {
+                    stepProcessingComplete = true;
+                }));
+
+                // Wait until the steps are fully processed
+                yield return new WaitUntil(() => stepProcessingComplete);
+
+                // Small delay between ingredients
+                yield return new WaitForSeconds(2.5f);
             }
             else
             {
-                Debug.LogWarning($"No operations found for ingredient: {ingredient}");
-
                 // Default handling for ingredients without defined operations
                 globalTaskCounter++;
                 LogOperationStep($"Processing {ingredient} (default operations)",
@@ -230,46 +243,46 @@ public class EnhancedRecipeManager : MonoBehaviour
                 // Use the basic movement sequence
                 if (movementSequencer != null)
                 {
-                    movementSequencer.AddIngredientToServing(ingredient);
-
-                    // Wait until movement completes
-                    while (movementSequencer.IsRunning())
-                    {
-                        yield return null;
-                    }
+                    yield return StartCoroutine(ExecuteMovementWithErrorHandling(ingredient));
                 }
 
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(2.5f);
             }
-
-            // Small pause between ingredients
-            yield return new WaitForSeconds(0.5f);
         }
 
-        // Calculate total time
-        TimeSpan elapsed = DateTime.Now - startTime;
-        totalPreparationTime = (float)elapsed.TotalSeconds;
+        // ... (rest of the method remains the same)
+    }
 
-        // Complete the log
-        operationLog.AppendLine($"All tasks completed successfully. Total preparation time: {FormatTime(totalPreparationTime)}");
+    // New method to handle ingredient steps with a completion callback
+    private IEnumerator ProcessIngredientStepsWithCompletion(string ingredient, IngredientOperations operations, System.Action onComplete)
+    {
+        yield return StartCoroutine(ProcessIngredientSteps(ingredient, operations));
+        onComplete?.Invoke();
+    }
+    private IEnumerator ExecuteMovementWithErrorHandling(string ingredient)
+    {
+        bool errorOccurred = false;
 
-        // Update the UI
-        if (operationLogText != null)
+        try
         {
-            operationLogText.text = operationLog.ToString();
-
-            // Scroll to bottom
-            if (logScrollRect != null)
-            {
-                Canvas.ForceUpdateCanvases();
-                logScrollRect.verticalNormalizedPosition = 0f;
-            }
+            // This part doesn't have yield inside the try block
+            movementSequencer.AddIngredientToServing(ingredient);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"Error moving ingredient {ingredient}: {e.Message}");
+            errorOccurred = true;
         }
 
-        // Update status and re-enable buttons
-        currentStatus = "Completed";
-        UpdateStatus($"Completed recipe: {recipe.recipeName}");
-        SetButtonsInteractable(true);
+        // Only wait for completion if we didn't have an error
+        if (!errorOccurred)
+        {
+            // Wait for completion outside the try block
+            while (movementSequencer.IsRunning())
+            {
+                yield return null;
+            }
+        }
     }
 
     /// <summary>
@@ -277,19 +290,31 @@ public class EnhancedRecipeManager : MonoBehaviour
     /// </summary>
     private IEnumerator ProcessIngredientSteps(string ingredient, IngredientOperations operations)
     {
-        foreach (var step in operations.steps)
+        Debug.Log($"Processing steps for ingredient: {ingredient}");
+        Debug.Log($"Total steps: {operations.steps.Length}");
+
+        // Process each step sequentially
+        for (int stepIndex = 0; stepIndex < operations.steps.Length; stepIndex++)
         {
+            var step = operations.steps[stepIndex];
+
+            Debug.Log($"Processing step {stepIndex + 1}: {step.description} (Repeat: {step.repeatCount})");
+
             // For each repeat of this step
-            for (int i = 0; i < step.repeatCount; i++)
+            for (int repeatIndex = 0; repeatIndex < step.repeatCount; repeatIndex++)
             {
                 // Increment the global task counter
                 globalTaskCounter++;
 
                 // Increment the ingredient-specific task counter
+                if (!ingredientTaskCounter.ContainsKey(ingredient))
+                {
+                    ingredientTaskCounter[ingredient] = 0;
+                }
                 ingredientTaskCounter[ingredient]++;
 
                 // Determine if this needs a repeat suffix
-                string repeatSuffix = step.repeatCount > 1 ? $" ({i + 1}/{step.repeatCount})" : "";
+                string repeatSuffix = step.repeatCount > 1 ? $" ({repeatIndex + 1}/{step.repeatCount})" : "";
 
                 // Start timing
                 float startTaskTime = Time.time;
@@ -300,7 +325,7 @@ public class EnhancedRecipeManager : MonoBehaviour
 
                 // Determine which robot action to take based on the step description
                 TaskResult result = new TaskResult { success = true };
-                yield return StartCoroutine(ExecuteRobotStep(ingredient, step.description, i, result));
+                yield return StartCoroutine(ExecuteRobotStep(ingredient, step.description, repeatIndex, result));
 
                 // Calculate actual time
                 float taskDuration = Time.time - startTaskTime;
@@ -309,14 +334,13 @@ public class EnhancedRecipeManager : MonoBehaviour
                 LogOperationStep(description, taskDuration, result.success, globalTaskCounter);
 
                 // Small delay between repeats
-                if (i < step.repeatCount - 1)
+                if (repeatIndex < step.repeatCount - 1)
                 {
                     yield return new WaitForSeconds(0.2f);
                 }
             }
         }
     }
-
     /// <summary>
     /// Execute a specific robot step based on description
     /// </summary>

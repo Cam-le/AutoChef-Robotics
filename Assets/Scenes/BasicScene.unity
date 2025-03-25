@@ -2210,57 +2210,57 @@ MonoBehaviour:
     steps:
     - description: Move arm to noodle container
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Pick up portion of noodle
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Place noodle in bowl
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
   - ingredientName: Brooth
     steps:
     - description: Move arm to brooth container
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Scoop brooth
       estimatedTime: 3
-      repeatCount: 1
+      repeatCount: 2
     - description: Pour brooth into bowl
       estimatedTime: 3
-      repeatCount: 1
+      repeatCount: 2
   - ingredientName: Topping1
     steps:
     - description: Move arm to container
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Pick up topping 1
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Place topping 1 in bowl
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
   - ingredientName: Topping2
     steps:
     - description: Move arm to container
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Pick up topping 2
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Place topping 2 in bowl
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
   - ingredientName: Topping3
     steps:
     - description: Move arm to container
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Pick up topping 3
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
     - description: Place topping 3 in bowl
       estimatedTime: 2
-      repeatCount: 0
+      repeatCount: 1
   recipeButtons:
   - {fileID: 1402364676}
   - {fileID: 1414513419}
@@ -2737,8 +2737,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 300}
+  m_AnchoredPosition: {x: 0, y: -0.00007422937}
+  m_SizeDelta: {x: 0, y: 295.138}
   m_Pivot: {x: 0, y: 1}
 --- !u!1001 &279164301
 PrefabInstance:
@@ -3430,7 +3430,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 309691879}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0.000026337}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 243825507}
@@ -3438,8 +3438,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 114.603, y: -140.22}
-  m_SizeDelta: {x: 229.207, y: 280.44}
+  m_AnchoredPosition: {x: 119.605995, y: -170.14899}
+  m_SizeDelta: {x: 219.202, y: 220.583}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &309691881
 MonoBehaviour:
@@ -13337,7 +13337,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -1705, y: -218}
+  m_AnchoredPosition: {x: -1705, y: -143}
   m_SizeDelta: {x: 250, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1684112197
@@ -14119,8 +14119,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 170590782}
   m_HandleRect: {fileID: 170590781}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9433332
+  m_Value: 1.0000075
+  m_Size: 0.9588733
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
