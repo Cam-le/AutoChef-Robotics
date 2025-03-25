@@ -55,7 +55,7 @@ public class EnhancedRecipeManager : MonoBehaviour
     [Header("UI Elements")]
     [SerializeField] private Button[] recipeButtons;
     [SerializeField] private Text statusText;
-    [SerializeField] private Text operationLogText;
+    [SerializeField] private TMPro.TextMeshProUGUI operationLogText;
     [SerializeField] private ScrollRect logScrollRect;
 
     [Header("Robot Settings")]
@@ -231,7 +231,7 @@ public class EnhancedRecipeManager : MonoBehaviour
                 yield return new WaitUntil(() => stepProcessingComplete);
 
                 // Small delay between ingredients
-                yield return new WaitForSeconds(2.5f);
+                yield return new WaitForSeconds(1f);
             }
             else
             {
@@ -246,7 +246,7 @@ public class EnhancedRecipeManager : MonoBehaviour
                     yield return StartCoroutine(ExecuteMovementWithErrorHandling(ingredient));
                 }
 
-                yield return new WaitForSeconds(2.5f);
+                yield return new WaitForSeconds(1f);
             }
         }
 
@@ -403,20 +403,20 @@ public class EnhancedRecipeManager : MonoBehaviour
         }
 
         // Small random chance of failure for demonstration
-        if (UnityEngine.Random.value < 0.02f) // 2% chance of failure
-        {
-            result.success = false;
+        //if (UnityEngine.Random.value < 0.02f) // 2% chance of failure
+        //{
+        //    result.success = false;
 
-            // Log the failure
-            operationLog.AppendLine($"- ERROR: Failed to {stepDescription.ToLower()} [Failed]");
-            operationLog.AppendLine($"- ERROR: Unable to complete remaining steps due to failure");
+        //    // Log the failure
+        //    operationLog.AppendLine($"- ERROR: Failed to {stepDescription.ToLower()} [Failed]");
+        //    operationLog.AppendLine($"- ERROR: Unable to complete remaining steps due to failure");
 
-            // Update status
-            UpdateStatus($"Error: Failed to {stepDescription.ToLower()}");
+        //    // Update status
+        //    UpdateStatus($"Error: Failed to {stepDescription.ToLower()}");
 
-            // Update completion status
-            currentStatus = "Failed";
-        }
+        //    // Update completion status
+        //    currentStatus = "Failed";
+        //}
     }
 
     /// <summary>
