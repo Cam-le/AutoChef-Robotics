@@ -98,7 +98,7 @@ public class CookingDemoManager : MonoBehaviour
         UpdateStatus($"Starting recipe {order.RecipeId}: {string.Join(", ", ingredients)}");
 
         // Use the movement sequencer to cook the recipe
-        movementSequencer.CookRecipe(ingredients);
+        movementSequencer.ProcessRecipe(ingredients);
 
         // Wait until the sequencer is done
         while (movementSequencer.IsRunning())
@@ -178,7 +178,7 @@ public class CookingDemoManager : MonoBehaviour
         UpdateStatus($"Picking up {ingredientName}...");
 
         // Pick up the ingredient and move it to cooking position
-        movementSequencer.AddIngredientToCooking(ingredientName);
+        movementSequencer.AddIngredientToServing(ingredientName);
 
         // Wait until the sequencer is done
         while (movementSequencer.IsRunning())
@@ -187,8 +187,8 @@ public class CookingDemoManager : MonoBehaviour
         }
 
         // Now serve it
-        UpdateStatus($"Serving {ingredientName}...");
-        movementSequencer.ServeDish();
+        //UpdateStatus($"Serving {ingredientName}...");
+        //movementSequencer.ServeDish();
 
         // Wait until complete
         while (movementSequencer.IsRunning())

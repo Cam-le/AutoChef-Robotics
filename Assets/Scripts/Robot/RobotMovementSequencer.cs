@@ -4,7 +4,7 @@ using UnityEngine;
 using System;
 
 /// <summary>
-/// This script handles higher-level movement sequences for the robot arm
+/// This script handles high-level movement sequences for the robot arm
 /// to interact with ingredients in the scene. It builds upon the existing
 /// RobotArmController.
 /// </summary>
@@ -23,8 +23,7 @@ public class RobotMovementSequencer : MonoBehaviour
     [SerializeField] private float moveDelay = 0.5f; // Time to wait between major movements
 
     [Header("Predefined Positions")]
-    [SerializeField] private Transform cookingPosition; // Where to drop ingredients for cooking
-    [SerializeField] private Transform servingPosition; // Where to place final food
+    [SerializeField] private Transform servingBowlPosition; // Where to place ingredients
 
     // Dictionary to map ingredient names to their transforms
     private Dictionary<string, Transform> ingredientMap = new Dictionary<string, Transform>();
@@ -63,39 +62,40 @@ public class RobotMovementSequencer : MonoBehaviour
     }
 
     /// <summary>
-    /// Picks up an ingredient by name and moves it to the cooking position
+    /// Picks up an ingredient by name and moves it to the serving bowl
     /// </summary>
-    public void AddIngredientToCooking(string ingredientName)
+    public void AddIngredientToServing(string ingredientName)
     {
-        if (!isSequenceRunning && ingredientMap.ContainsKey(ingredientName))
+        if (!isSequenceRunning && ingredientMap.ContainsKey(ingredientName) && servingBowlPosition != null)
         {
-            StartCoroutine(PickAndPlaceSequence(ingredientMap[ingredientName], cookingPosition));
+            StartCoroutine(PickAndPlaceSequence(ingredientMap[ingredientName], servingBowlPosition));
+        }
+        else if (isSequenceRunning)
+        {
+            Debug.LogWarning($"Cannot add ingredient '{ingredientName}': a sequence is already running.");
+        }
+        else if (!ingredientMap.ContainsKey(ingredientName))
+        {
+            Debug.LogWarning($"Cannot add ingredient '{ingredientName}': ingredient not found.");
         }
         else
         {
-            Debug.LogWarning($"Cannot add ingredient '{ingredientName}': either a sequence is already running or the ingredient wasn't found.");
-        }
-    }
-
-    /// <summary>
-    /// Moves food from cooking position to serving position
-    /// </summary>
-    public void ServeDish()
-    {
-        if (!isSequenceRunning && cookingPosition != null && servingPosition != null)
-        {
-            StartCoroutine(PickAndPlaceSequence(cookingPosition, servingPosition));
+            Debug.LogWarning("Cannot add ingredient: serving bowl position not defined.");
         }
     }
 
     /// <summary>
     /// Executes a complete cooking sequence involving multiple ingredients
     /// </summary>
-    public void CookRecipe(string[] ingredients)
+    public void ProcessRecipe(string[] ingredients)
     {
         if (!isSequenceRunning)
         {
             StartCoroutine(CookingSequence(ingredients));
+        }
+        else
+        {
+            Debug.LogWarning("Cannot process recipe: a sequence is already running.");
         }
     }
 
@@ -106,43 +106,55 @@ public class RobotMovementSequencer : MonoBehaviour
     {
         isSequenceRunning = true;
 
-        // Move to ready position first
-        robotController.MoveToReadyPosition();
+        // No longer moving to ready position first
+
+        // Calculate joint angles for hovering above the source
+        Vector3 hoverPosition = sourcePosition.position + Vector3.up * approachHeight;
+        float[] hoverAngles = CalculateJointAngles(hoverPosition);
+
+        // Move directly to hover position
+        robotController.MoveToJointAngles(hoverAngles);
         yield return new WaitForSeconds(moveDelay);
 
-        // Approach source from above
-        yield return StartCoroutine(ApproachPosition(sourcePosition.position, approachHeight));
+        // Calculate joint angles for the source position
+        float[] sourceAngles = CalculateJointAngles(sourcePosition.position);
 
         // Move down to grasp
-        yield return StartCoroutine(MoveToPosition(sourcePosition.position));
+        robotController.MoveToJointAngles(sourceAngles);
+        yield return new WaitForSeconds(moveDelay);
 
         // Close gripper
         robotController.CloseGripper();
         yield return new WaitForSeconds(graspDelay);
 
-        // Move back up
-        yield return StartCoroutine(ApproachPosition(sourcePosition.position, approachHeight));
-
-        // Move to temporary position to avoid collisions
-        robotController.MoveToReadyPosition();
+        // Move back up to hover position
+        robotController.MoveToJointAngles(hoverAngles);
         yield return new WaitForSeconds(moveDelay);
 
-        // Approach destination from above
-        yield return StartCoroutine(ApproachPosition(destinationPosition.position, approachHeight));
+        // Calculate joint angles for hovering above the destination
+        Vector3 destHoverPosition = destinationPosition.position + Vector3.up * approachHeight;
+        float[] destHoverAngles = CalculateJointAngles(destHoverPosition);
+
+        // Move directly to hover above destination (no intermediate ready position)
+        robotController.MoveToJointAngles(destHoverAngles);
+        yield return new WaitForSeconds(moveDelay);
+
+        // Calculate joint angles for the destination position
+        float[] destAngles = CalculateJointAngles(destinationPosition.position);
 
         // Move down to place
-        yield return StartCoroutine(MoveToPosition(destinationPosition.position));
+        robotController.MoveToJointAngles(destAngles);
+        yield return new WaitForSeconds(moveDelay);
 
         // Open gripper
         robotController.OpenGripper();
         yield return new WaitForSeconds(graspDelay);
 
-        // Move back up
-        yield return StartCoroutine(ApproachPosition(destinationPosition.position, approachHeight));
-
-        // Return to home position
-        robotController.MoveToHomePosition();
+        // Move back up to hover position
+        robotController.MoveToJointAngles(destHoverAngles);
         yield return new WaitForSeconds(moveDelay);
+
+        // No longer returning to home position after each ingredient
 
         isSequenceRunning = false;
     }
@@ -154,14 +166,13 @@ public class RobotMovementSequencer : MonoBehaviour
     {
         isSequenceRunning = true;
 
-        // Add each ingredient
         foreach (string ingredient in ingredients)
         {
             if (ingredientMap.ContainsKey(ingredient))
             {
-                yield return StartCoroutine(PickAndPlaceSequence(ingredientMap[ingredient], cookingPosition));
-                // Simulate some processing time
-                yield return new WaitForSeconds(1.0f);
+                yield return StartCoroutine(PickAndPlaceSequence(ingredientMap[ingredient], servingBowlPosition));
+                // Small pause between ingredients
+                yield return new WaitForSeconds(0.5f);
             }
             else
             {
@@ -169,68 +180,76 @@ public class RobotMovementSequencer : MonoBehaviour
             }
         }
 
-        // Move to serving position
-        yield return StartCoroutine(PickAndPlaceSequence(cookingPosition, servingPosition));
+        // Only return home once at the very end of the recipe
+        robotController.MoveToHomePosition();
 
         isSequenceRunning = false;
     }
 
     /// <summary>
-    /// Moves the robot arm to approach a position from above
-    /// </summary>
-    private IEnumerator ApproachPosition(Vector3 targetPosition, float heightOffset)
-    {
-        // Create an elevated position above the target
-        Vector3 elevatedPosition = new Vector3(
-            targetPosition.x,
-            targetPosition.y + heightOffset,
-            targetPosition.z
-        );
-
-        // Calculate joint angles for this position
-        float[] jointAngles = CalculateJointAngles(elevatedPosition);
-
-        // Move to the calculated angles
-        robotController.MoveToJointAngles(jointAngles);
-
-        // Wait for movement to complete
-        yield return new WaitForSeconds(moveDelay);
-    }
-
-    /// <summary>
-    /// Moves the robot arm directly to a position (for final approach)
-    /// </summary>
-    private IEnumerator MoveToPosition(Vector3 targetPosition)
-    {
-        // Calculate joint angles for this position
-        float[] jointAngles = CalculateJointAngles(targetPosition);
-
-        // Move to the calculated angles
-        robotController.MoveToJointAngles(jointAngles);
-
-        // Wait for movement to complete
-        yield return new WaitForSeconds(moveDelay);
-    }
-
-    /// <summary>
     /// Calculates joint angles required to reach a specific position
-    /// This is a placeholder for inverse kinematics - in a real implementation,
-    /// you would implement proper IK here
+    /// This needs to be customized for your specific robot and scene setup
     /// </summary>
+    // Auto-generated joint angle positions
     private float[] CalculateJointAngles(Vector3 targetPosition)
     {
-        // This is a placeholder - in reality, you'd implement inverse kinematics here
-        // For now, we'll provide some dummy values that you can replace with actual values
-        // for specific positions in your scene
+        // Simple position lookup table
+        Dictionary<string, float[]> positionMap = new Dictionary<string, float[]>
+        {
+        // ServingBowl
+        {"0.49,-1.68,5.94", new float[] {-7.543209f, -74.92943f, 42.8175f, -0.0003111362f, 0, 16.0559f}},
+        // Topping1
+        {"-0.78,-1.64,3.30", new float[] {123.0988f, -32.11256f, -26.7605f, -0.0003111362f, 0, 16.0559f}},
+        // Topping2
+        {"-0.78,-1.64,4.44", new float[] {64.22575f, -37.46447f, -21.40875f, -0.0003111362f, 0, 16.0559f}},
+        // Topping3
+        {"-0.78,-1.64,5.58", new float[] {29.92094f, -53.52084f, 16.0562f, -0.0003111362f, 0, 16.0559f}},
+        // Brooth
+        {"1.26,-2.65,3.43", new float[] {-119.9381f, -37.46432f, -26.7605f, -0.0003111362f, 0, 16.0559f}},
+        // Noodle
+        {"1.22,-2.65,4.88", new float[] {-61.06499f, -37.46432f, -37.46558f, -0.0003111362f, 0, 16.0559f}}
+        };
 
-        // For a real implementation:
-        // 1. You might use Unity's built-in IK system
-        // 2. Or implement analytical IK for a 6-DOF arm
-        // 3. Or use a lookup table with pre-calculated values for known positions
+        // Convert position to string key for lookup (rounded to 2 decimal places)
+        string posKey = $"{targetPosition.x:F2},{targetPosition.y:F2},{targetPosition.z:F2}";
 
-        // Return default values - these should be replaced with actual joints for your setup
+        // Try to find the position in our lookup
+        if (positionMap.TryGetValue(posKey, out float[] angles))
+        {
+            return angles;
+        }
+
+        // Not an exact match, try to find the closest position
+        float closestDistance = float.MaxValue;
+        string closestKey = null;
+
+        foreach (var key in positionMap.Keys)
+        {
+            string[] parts = key.Split(',');
+            Vector3 pos = new Vector3(
+                float.Parse(parts[0]),
+                float.Parse(parts[1]),
+                float.Parse(parts[2]));
+
+            float distance = Vector3.Distance(pos, targetPosition);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+                closestKey = key;
+            }
+        }
+
+        if (closestKey != null && closestDistance < 0.1f)
+        {
+            Debug.Log($"Using approximate position. Distance: {closestDistance}");
+            return positionMap[closestKey];
+        }
+
+        // Fallback - return a safe position
+        Debug.LogWarning($"No joint angles found for position {targetPosition}");
         return new float[] { 0, 0, 0, 0, 0, 0 };
     }
+
 
     /// <summary>
     /// Public method to check if the sequencer is currently running a sequence
@@ -248,6 +267,7 @@ public class RobotMovementSequencer : MonoBehaviour
         if (!string.IsNullOrEmpty(name) && position != null)
         {
             ingredientMap[name] = position;
+            Debug.Log($"Added ingredient position: {name}");
         }
     }
 }

@@ -16,7 +16,7 @@ public class RobotArmController : MonoBehaviour
 
     // Constants
     private const int NUM_ROBOT_JOINTS = 6;
-    private const float JOINT_ASSIGNMENT_WAIT = 0.1f;
+    private const float JOINT_ASSIGNMENT_WAIT = 0.3f;
 
     [Header("Gripper Settings")]
     public ArticulationBody leftGripper;

@@ -156,11 +156,21 @@ public class RobotArmTcpServer : MonoBehaviour
 
     private async Task PrepareFood(Order order)
     {
-        // Giả lập robot làm đồ ăn dựa trên các món trong đơn hàng
-        // Bổ sung Items vào Order
-        await Task.Delay((int)(prepareIngredientsTime * 1000)); // Thời gian chuẩn bị
-        await Task.Delay((int)(cookingTime * 1000)); // Thời gian nấu
-        await Task.Delay((int)(finishingTime * 1000)); // Thời gian hoàn thiện
+        // Find the RecipeManager
+        RecipeManager recipeManager = FindObjectOfType<RecipeManager>();
+
+        if (recipeManager != null)
+        {
+            // Process the recipe based on RecipeId
+            recipeManager.ProcessRecipe(order.RecipeId);
+
+            // The actual cooking will happen asynchronously
+            // We can simulate the timing with your existing delays
+            await Task.Delay((int)(prepareIngredientsTime * 1000));
+            await Task.Delay((int)(cookingTime * 1000));
+            await Task.Delay((int)(finishingTime * 1000));
+        }
+
     }
 
     private async Task UpdateOrderStatus(int orderId, string status)
