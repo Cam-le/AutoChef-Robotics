@@ -40,6 +40,7 @@ public class EnhancedRecipeManager : MonoBehaviour
     private class TaskResult
     {
         public bool success;
+        public float taskDuration;
     }
 
     [Header("References")]
@@ -195,6 +196,9 @@ public class EnhancedRecipeManager : MonoBehaviour
     {
         currentStatus = "Processing";
 
+        // Start time of the entire recipe
+        DateTime recipeStartTime = DateTime.Now;
+
         // Disable all buttons while the robot is moving
         SetButtonsInteractable(false);
 
@@ -231,7 +235,7 @@ public class EnhancedRecipeManager : MonoBehaviour
                 yield return new WaitUntil(() => stepProcessingComplete);
 
                 // Small delay between ingredients
-                yield return new WaitForSeconds(1f);
+                yield return new WaitForSeconds(2.5f);
             }
             else
             {
@@ -246,11 +250,35 @@ public class EnhancedRecipeManager : MonoBehaviour
                     yield return StartCoroutine(ExecuteMovementWithErrorHandling(ingredient));
                 }
 
-                yield return new WaitForSeconds(1f);
+                yield return new WaitForSeconds(2.5f);
             }
         }
 
-        // ... (rest of the method remains the same)
+        // Calculate total preparation time
+        totalPreparationTime = (float)(DateTime.Now - recipeStartTime).TotalSeconds;
+
+        // Add completion log entry
+        operationLog.AppendLine($"Recipe completed in {FormatTime(totalPreparationTime)} [Success]");
+
+        // Update operation log UI
+        if (operationLogText != null)
+        {
+            operationLogText.text = operationLog.ToString();
+
+            // Scroll to bottom
+            if (logScrollRect != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                logScrollRect.verticalNormalizedPosition = 0f;
+            }
+        }
+
+        // Update the status
+        currentStatus = "Completed";
+        UpdateStatus($"Recipe {recipe.recipeName} completed in {FormatTime(totalPreparationTime)}");
+
+        // Re-enable buttons
+        SetButtonsInteractable(true);
     }
 
     // New method to handle ingredient steps with a completion callback
@@ -316,22 +344,18 @@ public class EnhancedRecipeManager : MonoBehaviour
                 // Determine if this needs a repeat suffix
                 string repeatSuffix = step.repeatCount > 1 ? $" ({repeatIndex + 1}/{step.repeatCount})" : "";
 
-                // Start timing
-                float startTaskTime = Time.time;
-
                 // Log the step beginning
                 string description = $"{step.description}{repeatSuffix}";
                 UpdateStatus($"Task {globalTaskCounter}: {description}");
 
-                // Determine which robot action to take based on the step description
-                TaskResult result = new TaskResult { success = true };
+                // Create result object to capture duration and success
+                TaskResult result = new TaskResult { success = true, taskDuration = 0 };
+
+                // Execute the robot step
                 yield return StartCoroutine(ExecuteRobotStep(ingredient, step.description, repeatIndex, result));
 
-                // Calculate actual time
-                float taskDuration = Time.time - startTaskTime;
-
-                // Log the completed step
-                LogOperationStep(description, taskDuration, result.success, globalTaskCounter);
+                // Log the completed step with the actual duration after execution
+                LogOperationStep(description, result.taskDuration, result.success, globalTaskCounter);
 
                 // Small delay between repeats
                 if (repeatIndex < step.repeatCount - 1)
@@ -346,79 +370,95 @@ public class EnhancedRecipeManager : MonoBehaviour
     /// </summary>
     private IEnumerator ExecuteRobotStep(string ingredient, string stepDescription, int repeatIndex, TaskResult result)
     {
-        // Parse the step description to determine the action
-        if (stepDescription.Contains("Move arm to"))
-        {
-            // This is a movement step
-            if (movementSequencer != null)
-            {
-                // Add additional delay to simulate movement
-                yield return new WaitForSeconds(UnityEngine.Random.Range(0.3f, 0.8f) * moveDelayFactor);
-            }
-        }
-        else if (stepDescription.Contains("Pick up"))
-        {
-            // This is a pickup step
-            if (robotController != null)
-            {
-                robotController.CloseGripper();
+        // Start timing for this step
+        float startTaskTime = Time.time;
+        bool movementWait = false;
 
-                // Simulate pickup time
-                yield return new WaitForSeconds(UnityEngine.Random.Range(0.5f, 1.0f) * moveDelayFactor);
-            }
-        }
-        else if (stepDescription.Contains("Place") || stepDescription.Contains("Pour"))
+        try
         {
-            // This is a placement step
-            if (movementSequencer != null)
+            // Parse the step description to determine the action
+            if (stepDescription.Contains("Move arm to"))
             {
-                // For demonstration, we'll actually move the ingredient if it's the first repeat
-                if (repeatIndex == 0)
+                // This is a movement step
+                if (movementSequencer != null)
                 {
-                    movementSequencer.AddIngredientToServing(ingredient);
-
-                    // Wait until the movement is complete
-                    while (movementSequencer.IsRunning())
-                    {
-                        yield return null;
-                    }
+                    // Add additional delay to simulate movement
+                    yield return new WaitForSeconds(UnityEngine.Random.Range(0.3f, 0.8f) * moveDelayFactor);
                 }
-                else
-                {
-                    // For subsequent repeats, just simulate the time
-                    yield return new WaitForSeconds(UnityEngine.Random.Range(0.8f, 1.2f) * moveDelayFactor);
-                }
-
-                // Open gripper after placement
+            }
+            else if (stepDescription.Contains("Pick up"))
+            {
+                // This is a pickup step
                 if (robotController != null)
                 {
-                    robotController.OpenGripper();
+                    robotController.CloseGripper();
+
+                    // Simulate pickup time
+                    yield return new WaitForSeconds(UnityEngine.Random.Range(0.5f, 1.0f) * moveDelayFactor);
                 }
             }
+            else if (stepDescription.Contains("Place") || stepDescription.Contains("Pour"))
+            {
+                // This is a placement step
+                if (movementSequencer != null)
+                {
+                    // For demonstration, we'll actually move the ingredient if it's the first repeat
+                    if (repeatIndex == 0)
+                    {
+                        movementSequencer.AddIngredientToServing(ingredient);
+                        movementWait = true;
+                    }
+                    else
+                    {
+                        // For subsequent repeats, just simulate the time
+                        yield return new WaitForSeconds(UnityEngine.Random.Range(0.8f, 1.2f) * moveDelayFactor);
+                    }
+
+                    // Open gripper after placement
+                    if (robotController != null)
+                    {
+                        robotController.OpenGripper();
+                    }
+                }
+            }
+            else
+            {
+                // Generic action for other descriptions
+                yield return new WaitForSeconds(UnityEngine.Random.Range(0.5f, 1.5f) * moveDelayFactor);
+            }
+
+            // Wait for the movement to complete if using actual robot movement
+            if (movementWait && movementSequencer != null)
+            {
+                // Wait until the movement is complete
+                while (movementSequencer.IsRunning())
+                {
+                    yield return null;
+                }
+            }
+
+            // Small random chance of failure for demonstration
+            //if (UnityEngine.Random.value < 0.02f) // 2% chance of failure
+            //{
+            //    result.success = false;
+
+            //    // Log the failure
+            //    operationLog.AppendLine($"- ERROR: Failed to {stepDescription.ToLower()} [Failed]");
+            //    operationLog.AppendLine($"- ERROR: Unable to complete remaining steps due to failure");
+
+            //    // Update status
+            //    UpdateStatus($"Error: Failed to {stepDescription.ToLower()}");
+
+            //    // Update completion status
+            //    currentStatus = "Failed";
+            //}
         }
-        else
+        finally
         {
-            // Generic action for other descriptions
-            yield return new WaitForSeconds(UnityEngine.Random.Range(0.5f, 1.5f) * moveDelayFactor);
+            // Calculate the duration - always done, even if there's an exception
+            result.taskDuration = Time.time - startTaskTime;
         }
-
-        // Small random chance of failure for demonstration
-        //if (UnityEngine.Random.value < 0.02f) // 2% chance of failure
-        //{
-        //    result.success = false;
-
-        //    // Log the failure
-        //    operationLog.AppendLine($"- ERROR: Failed to {stepDescription.ToLower()} [Failed]");
-        //    operationLog.AppendLine($"- ERROR: Unable to complete remaining steps due to failure");
-
-        //    // Update status
-        //    UpdateStatus($"Error: Failed to {stepDescription.ToLower()}");
-
-        //    // Update completion status
-        //    currentStatus = "Failed";
-        //}
     }
-
     /// <summary>
     /// Log an operation step with timing information
     /// </summary>
