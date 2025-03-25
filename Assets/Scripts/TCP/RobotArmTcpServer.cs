@@ -124,7 +124,21 @@ public class RobotArmTcpServer : MonoBehaviour
                         if (order != null && order.OrderId > 0)
                         {
                             Debug.Log($"Nhận được đơn hàng mới: {order.OrderId}");
-                            await ProcessOrderAsync(order);
+
+                            // Check if order is cancelled before processing
+                            bool isCancelled = await IsOrderCancelled(order.OrderId);
+
+                            if (isCancelled)
+                            {
+                                Debug.LogWarning($"Đơn hàng {order.OrderId} đã bị cancel.");
+                            }
+                            else
+                            {
+                                //Debug.Log($"Order {order.OrderId} is not cancelled. Processing order...");
+                                await ProcessOrderAsync(order);
+                            }
+
+                            //await ProcessOrderAsync(order);
                         }
                     }
                 }
@@ -140,7 +154,68 @@ public class RobotArmTcpServer : MonoBehaviour
             Debug.LogError($"Lỗi gọi API lấy đơn hàng: {ex.Message}");
         }
     }
+    private async Task<bool> IsOrderCancelled(int orderId)
+    {
+        try
+        {
+            Debug.Log($"Checking if order {orderId} is cancelled...");
 
+            // Call the API to check if order is cancelled
+            HttpResponseMessage response = await httpClient.GetAsync(
+                $"https://autochefsystem.azurewebsites.net/api/Order/check-cancelled/{orderId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                string responseContent = await response.Content.ReadAsStringAsync();
+
+                // Parse the response - assuming it returns true/false or a JSON with a boolean property
+                bool isCancelled = false;
+
+                // Try to parse as direct boolean
+                if (bool.TryParse(responseContent, out bool directResult))
+                {
+                    isCancelled = directResult;
+                }
+                else
+                {
+                    // Try to parse as JSON object with a result property
+                    try
+                    {
+                        var result = JsonConvert.DeserializeObject<CancellationResponse>(responseContent);
+                        if (result != null)
+                        {
+                            isCancelled = result.IsCancelled;
+                        }
+                    }
+                    catch
+                    {
+                        // If all parsing fails, assume not cancelled
+                        //Debug.LogWarning($"Could not parse cancellation response for order {orderId}. Assuming not cancelled.");
+                        return false;
+                    }
+                }
+
+                Debug.Log($"Trạng thái của Order {orderId}: {(isCancelled ? "Bị Cancel" : "Không bị Cancel")}");
+                return isCancelled;
+            }
+            else
+            {
+                // If API call fails, log the error and assume not cancelled to be safe
+                Debug.LogWarning($"Gọi API check trạng thái thất bại cho order {orderId}: {response.StatusCode}");
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Không check được cancel status của order {orderId}: {ex.Message}");
+            return false; // Assume not cancelled in case of error to be safe
+        }
+    }
+    public class CancellationResponse
+    {
+        [JsonProperty("isCancelled")]
+        public bool IsCancelled { get; set; }
+    }
     private async Task ProcessOrderAsync(Order order)
     {
         isProcessingOrder = true;
