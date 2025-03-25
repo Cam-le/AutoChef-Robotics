@@ -37,7 +37,7 @@ public class RobotArmTcpServer : MonoBehaviour
     // Recipe manager reference
     [Header("Recipe Configuration")]
     [SerializeField]
-    private RecipeManager recipeManager;
+    private EnhancedRecipeManager recipeManager;
 
     // Enable random recipe selection
     [SerializeField]
@@ -56,7 +56,7 @@ public class RobotArmTcpServer : MonoBehaviour
         // Find recipe manager if not set
         if (recipeManager == null)
         {
-            recipeManager = FindObjectOfType<RecipeManager>();
+            recipeManager = FindObjectOfType<EnhancedRecipeManager>();
             if (recipeManager == null)
             {
                 Debug.LogWarning("RecipeManager not found. Recipe processing may not work correctly.");
@@ -254,7 +254,7 @@ public class RobotArmTcpServer : MonoBehaviour
         // Find the RecipeManager
         if (recipeManager == null)
         {
-            recipeManager = FindObjectOfType<RecipeManager>();
+            recipeManager = FindObjectOfType<EnhancedRecipeManager>();
         }
 
         if (recipeManager != null)
@@ -289,6 +289,52 @@ public class RobotArmTcpServer : MonoBehaviour
             // Process the recipe
             recipeManager.ProcessRecipe(recipeId);
 
+            Debug.Log("Đợi robot nấu...");
+            // Keep checking status until completed or failed
+            string status = "";
+            int checkIntervalMs = 500; // Check every 500ms
+            int maxWaitTimeMs = 180000; // Maximum wait time of 3 minutes
+            int elapsedTimeMs = 0;
+
+            while (elapsedTimeMs < maxWaitTimeMs)
+            {
+                status = recipeManager.GetStatus();
+
+                // Check if processing is complete
+                if (status == "Completed" || status == "Failed")
+                {
+                    break;
+                }
+
+                // Wait before checking again
+                await Task.Delay(checkIntervalMs);
+                elapsedTimeMs += checkIntervalMs;
+
+                // Log updates periodically (every ~5 seconds)
+                if (elapsedTimeMs % 5000 < checkIntervalMs)
+                {
+                    Debug.Log($"Still processing recipe... ({elapsedTimeMs / 1000}s elapsed)");
+                }
+            }
+
+            if (status == "Completed")
+            {
+                Debug.Log("Recipe completed successfully!");
+
+                // Get the operation log from EnhancedRecipeManager
+                string operationLog = recipeManager.GetOperationLog();
+                
+            }
+            else if (status == "Failed")
+            {
+                Debug.LogError("Recipe processing failed!");
+                throw new Exception("Recipe processing failed");
+            }
+            else
+            {
+                Debug.LogWarning("Recipe processing timed out!");
+                throw new Exception("Recipe processing timed out");
+            }
         }
         else
         {
