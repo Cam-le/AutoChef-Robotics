@@ -34,6 +34,15 @@ public class RobotArmTcpServer : MonoBehaviour
     [SerializeField]
     private Text statusText;
 
+    // Recipe manager reference
+    [Header("Recipe Configuration")]
+    [SerializeField]
+    private RecipeManager recipeManager;
+
+    // Enable random recipe selection
+    [SerializeField]
+    private bool useRandomRecipe = true;
+
     private HttpClient httpClient;
     private bool isProcessingOrder = false;
     private CancellationTokenSource cancellationToken;
@@ -43,6 +52,17 @@ public class RobotArmTcpServer : MonoBehaviour
     {
         httpClient = new HttpClient();
         StartOrderPolling();
+
+        // Find recipe manager if not set
+        if (recipeManager == null)
+        {
+            recipeManager = FindObjectOfType<RecipeManager>();
+            if (recipeManager == null)
+            {
+                Debug.LogWarning("RecipeManager not found. Recipe processing may not work correctly.");
+            }
+        }
+
 
         if (statusText != null)
         {
@@ -157,19 +177,61 @@ public class RobotArmTcpServer : MonoBehaviour
     private async Task PrepareFood(Order order)
     {
         // Find the RecipeManager
-        RecipeManager recipeManager = FindObjectOfType<RecipeManager>();
+        if (recipeManager == null)
+        {
+            recipeManager = FindObjectOfType<RecipeManager>();
+        }
 
         if (recipeManager != null)
         {
-            // Process the recipe based on RecipeId
-            recipeManager.ProcessRecipe(order.RecipeId);
+            // Get the number of available recipes
+            int recipeCount = 0;
 
-            // The actual cooking will happen asynchronously
-            // We can simulate the timing with your existing delays
-            await Task.Delay((int)(prepareIngredientsTime * 1000));
-            await Task.Delay((int)(cookingTime * 1000));
-            await Task.Delay((int)(finishingTime * 1000));
+            // Use reflection to get the recipes array length
+            var recipesField = recipeManager.GetType().GetField("recipes",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+            if (recipesField != null)
+            {
+                var recipes = recipesField.GetValue(recipeManager);
+                if (recipes is Array recipesArray)
+                {
+                    recipeCount = recipesArray.Length;
+                }
+            }
+
+            // Determine which recipe to use
+            int recipeId = order.RecipeId;
+
+            // If random recipe is enabled or the received RecipeId is invalid
+            if (useRandomRecipe || recipeId < 0 || recipeId >= recipeCount)
+            {
+                // Select a random recipe
+                recipeId = UnityEngine.Random.Range(0, recipeCount);
+                Debug.Log($"Using random recipe: {recipeId}");
+            }
+
+            // Process the recipe
+            recipeManager.ProcessRecipe(recipeId);
+
         }
+        else
+        {
+            Debug.LogError("RecipeManager not found. Cannot process food preparation.");
+            throw new Exception("RecipeManager not found");
+        }
+
+        //if (recipeManager != null)
+        //{
+        //    // Process the recipe based on RecipeId
+        //    recipeManager.ProcessRecipe(order.RecipeId);
+
+        //    // The actual cooking will happen asynchronously
+        //    // We can simulate the timing with your existing delays
+        //    await Task.Delay((int)(prepareIngredientsTime * 1000));
+        //    await Task.Delay((int)(cookingTime * 1000));
+        //    await Task.Delay((int)(finishingTime * 1000));
+        //}
 
     }
 

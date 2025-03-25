@@ -4994,7 +4994,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 40.63878
+  field of view: 39.960297
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -5019,13 +5019,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 528904322}
-  m_LocalRotation: {x: 0.2847817, y: 0.226952, z: -0.052748147, w: 0.929844}
-  m_LocalPosition: {x: -2.3, y: 4.3, z: -2.1}
+  m_LocalRotation: {x: 0.0073881755, y: 0.98237175, z: -0.1864929, w: 0.010560896}
+  m_LocalPosition: {x: -0.9, y: 3.5, z: 13.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 33.611, y: 28.08, z: 2.145}
+  m_LocalEulerAnglesHint: {x: 21.504, y: 178.892, z: 0.651}
 --- !u!114 &528904326
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8665,7 +8665,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1027626624}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8651aca6de90373408c3812b59c33c5b, type: 3}
   m_Name: 
@@ -8676,6 +8676,8 @@ MonoBehaviour:
   finishingTime: 2
   robotArm: {fileID: 0}
   statusText: {fileID: 0}
+  recipeManager: {fileID: 0}
+  useRandomRecipe: 1
 --- !u!114 &1027626630
 MonoBehaviour:
   m_ObjectHideFlags: 0

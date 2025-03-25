@@ -203,18 +203,18 @@ public class EnhancedRecipeManager : MonoBehaviour
         SetButtonsInteractable(false);
 
         int ingredientCount = recipe.ingredients.Length;
-        Debug.Log($"Starting to process {ingredientCount} ingredients for {recipe.recipeName}");
+        //Debug.Log($"Starting to process {ingredientCount} ingredients for {recipe.recipeName}");
 
         // Process each ingredient one by one
         for (int i = 0; i < ingredientCount; i++)
         {
             string ingredient = recipe.ingredients[i];
-            Debug.Log($"Processing ingredient {i + 1}/{ingredientCount}: {ingredient}");
+            //Debug.Log($"Processing ingredient {i + 1}/{ingredientCount}: {ingredient}");
 
             // Check if we have operations for this ingredient
             if (operationsLookup.ContainsKey(ingredient))
             {
-                Debug.Log($"Found operations for {ingredient}");
+                //Debug.Log($"Found operations for {ingredient}");
                 IngredientOperations operations = operationsLookup[ingredient];
 
                 // Initialize task counter for this ingredient if not exists
@@ -318,15 +318,15 @@ public class EnhancedRecipeManager : MonoBehaviour
     /// </summary>
     private IEnumerator ProcessIngredientSteps(string ingredient, IngredientOperations operations)
     {
-        Debug.Log($"Processing steps for ingredient: {ingredient}");
-        Debug.Log($"Total steps: {operations.steps.Length}");
+        //Debug.Log($"Processing steps for ingredient: {ingredient}");
+        //Debug.Log($"Total steps: {operations.steps.Length}");
 
         // Process each step sequentially
         for (int stepIndex = 0; stepIndex < operations.steps.Length; stepIndex++)
         {
             var step = operations.steps[stepIndex];
 
-            Debug.Log($"Processing step {stepIndex + 1}: {step.description} (Repeat: {step.repeatCount})");
+            //Debug.Log($"Processing step {stepIndex + 1}: {step.description} (Repeat: {step.repeatCount})");
 
             // For each repeat of this step
             for (int repeatIndex = 0; repeatIndex < step.repeatCount; repeatIndex++)
@@ -493,7 +493,7 @@ public class EnhancedRecipeManager : MonoBehaviour
         {
             statusText.text = message;
         }
-        Debug.Log(message);
+        //Debug.Log(message);
     }
 
     /// <summary>
