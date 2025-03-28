@@ -1,0 +1,18 @@
+{
+  "ApiBaseUrl": "https://autochefsystem.azurewebsites.net/api",
+  "Endpoints": {
+    "RecipesEndpoint": "Recipe/all",
+    "RecipeStepsEndpoint": "recipesteps/recipe/{0}",
+    "RobotStepTasksEndpoint": "robot-step-tasks",
+    "OrderQueueEndpoint": "Order/receive-from-queue",
+    "OrderStatusUpdateEndpoint": "Order/update-order-status",
+    "OrderCancellationCheckEndpoint": "Order/check-cancelled/{0}"
+  },
+  "Settings": {
+    "MaxRetries": 3,
+    "InitialRetryDelayMs": 3000,
+    "RecipePageSize": 20,
+    "RobotStepTasksPageSize": 1000,
+    "PollIntervalSeconds": 5
+  }
+}

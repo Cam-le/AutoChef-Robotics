@@ -1,17 +1,18 @@
+using AutoChef.API.Client;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// This script manages a cooking demo by connecting the RobotArmTcpServer
+/// This script manages a cooking demo by connecting the AutoChefApiClient
 /// with the RobotMovementSequencer. It handles the integration between
 /// order processing and physical robot movements.
 /// </summary>
 public class CookingDemoManager : MonoBehaviour
 {
     [Header("Robot References")]
-    [SerializeField] private AutoChefApiClient tcpServer;
+    [SerializeField] private AutoChefApiClient apiClient;
     [SerializeField] private RobotMovementSequencer movementSequencer;
 
     [Header("Ingredient Setup")]
@@ -31,9 +32,9 @@ public class CookingDemoManager : MonoBehaviour
     private void Start()
     {
         // Initialize references if not set in inspector
-        if (tcpServer == null)
+        if (apiClient == null)
         {
-            tcpServer = GetComponent<AutoChefApiClient>();
+            apiClient = GetComponent<AutoChefApiClient>();
         }
 
         if (movementSequencer == null)
@@ -64,9 +65,9 @@ public class CookingDemoManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Called by the TCP server when a new order is received
+    /// Called by the API client when a new order is received
     /// </summary>
-    public void ProcessOrder(AutoChefApiClient.Order order)
+    public void ProcessOrder(OrderApiModel order)
     {
         // Only process if we're not already running a sequence
         if (!movementSequencer.IsRunning())
@@ -93,7 +94,7 @@ public class CookingDemoManager : MonoBehaviour
     /// <summary>
     /// Cooking process coroutine
     /// </summary>
-    private IEnumerator CookRecipe(AutoChefApiClient.Order order, string[] ingredients)
+    private IEnumerator CookRecipe(OrderApiModel order, string[] ingredients)
     {
         UpdateStatus($"Starting recipe {order.RecipeId}: {string.Join(", ", ingredients)}");
 
@@ -133,7 +134,7 @@ public class CookingDemoManager : MonoBehaviour
                 // Add new listener
                 demoButtons[i].onClick.AddListener(() => {
                     // Create a simulated order
-                    AutoChefApiClient.Order demoOrder = new AutoChefApiClient.Order
+                    OrderApiModel demoOrder = new OrderApiModel
                     {
                         OrderId = -1, // Negative ID indicates a demo order
                         RecipeId = recipes[recipeIndex].recipeId,
