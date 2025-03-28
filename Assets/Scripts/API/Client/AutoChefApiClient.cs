@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Newtonsoft.Json;
 using AutoChef.API.Models;
+using TMPro;
 
 namespace AutoChef.API.Client
 {
@@ -51,7 +52,7 @@ namespace AutoChef.API.Client
         [SerializeField] private int pollIntervalSeconds = 5;
 
         [Header("Logging UI")]
-        [SerializeField] private Text logTextArea;
+        [SerializeField] private TextMeshProUGUI logTextArea;
         [SerializeField] private ScrollRect logScrollRect;
         [SerializeField] private int maxLogLines = 100;
 
@@ -1072,12 +1073,6 @@ namespace AutoChef.API.Client
             if (logTextArea != null)
             {
                 logTextArea.text = string.Join("\n", logEntries);
-
-                // Scroll to bottom in the next frame
-                if (logScrollRect != null)
-                {
-                    StartCoroutine(ScrollToBottomNextFrame());
-                }
             }
         }
 
