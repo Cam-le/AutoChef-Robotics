@@ -6,7 +6,8 @@
     "RobotStepTasksEndpoint": "robot-step-tasks",
     "OrderQueueEndpoint": "Order/receive-from-queue",
     "OrderStatusUpdateEndpoint": "Order/update-order-status",
-    "OrderCancellationCheckEndpoint": "Order/check-cancelled/{0}"
+    "OrderCancellationCheckEndpoint": "Order/check-cancelled/{0}",
+    "RobotOperationLogsEndpoint": "robot-operation-logs"
   },
   "Settings": {
     "MaxRetries": 3,

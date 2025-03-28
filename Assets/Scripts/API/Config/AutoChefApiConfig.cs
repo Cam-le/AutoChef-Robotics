@@ -99,6 +99,7 @@ namespace AutoChef.API.Client
         public string OrderQueueEndpoint = "Order/receive-from-queue";
         public string OrderStatusUpdateEndpoint = "Order/update-order-status";
         public string OrderCancellationCheckEndpoint = "Order/check-cancelled/{0}"; // {0} will be replaced with orderId
+        public string RobotOperationLogsEndpoint = "robot-operation-logs";
     }
 
     /// <summary>

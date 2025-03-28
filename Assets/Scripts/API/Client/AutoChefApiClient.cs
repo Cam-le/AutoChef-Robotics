@@ -41,7 +41,8 @@ namespace AutoChef.API.Client
         [SerializeField] private string orderQueueEndpoint = "Order/receive-from-queue";
         [SerializeField] private string orderStatusUpdateEndpoint = "Order/update-order-status";
         [SerializeField] private string orderCancellationCheckEndpoint = "Order/check-cancelled/{0}";
-
+        [SerializeField] private string robotOperationLogsEndpoint = "robot-operation-logs";
+        
         [Header("API Settings")]
         [SerializeField] private int maxRetries = 3;
         [SerializeField] private int initialRetryDelayMs = 1000;
@@ -58,7 +59,7 @@ namespace AutoChef.API.Client
         [SerializeField] private Transform robotArm;
         [SerializeField] private Text statusText;
         [SerializeField] private AutoChefRecipeManager recipeManager;
-        [SerializeField] private bool useRandomRecipe = true;
+        [SerializeField] private bool useRandomRecipe = false;
 
         private HttpClient httpClient;
         private bool isSystemOperational = false;
@@ -668,6 +669,55 @@ namespace AutoChef.API.Client
             }
         }
 
+        /// <summary>
+        /// Posts the operation log to the database 
+        /// </summary>
+        /// <param name="orderId">ID of the order</param>
+        /// <param name="robotId">ID of the robot</param>
+        /// <param name="startTime">When the operation started</param>
+        /// <param name="endTime">When the operation ended</param>
+        /// <param name="completionStatus">Status (e.g., "Completed", "Failed")</param>
+        /// <param name="operationLog">The full operation log text</param>
+        /// <returns>Task representing the async operation</returns>
+        public async Task<bool> PostOperationLogAsync(int orderId, int robotId, DateTime startTime, DateTime endTime,
+                                           string completionStatus, string operationLog)
+        {
+            try
+            {
+                AddLog($"Posting operation log for order {orderId}...");
+
+                var logRequest = new RobotOperationLogRequest
+                {
+                    OrderId = orderId,
+                    RobotId = robotId,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    CompletionStatus = completionStatus,
+                    OperationLog = operationLog
+                };
+
+                var content = new StringContent(
+                    JsonConvert.SerializeObject(logRequest),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                string url = $"{apiBaseUrl}/{robotOperationLogsEndpoint}";
+                AddLog($"Request URL: {url}", LogType.Log);
+
+                HttpResponseMessage response = await httpClient.PostAsync(url, content);
+
+                response.EnsureSuccessStatusCode();
+
+                AddLog($"Successfully posted operation log for order {orderId}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Error posting operation log: {ex.Message}", LogType.Error);
+                return false;
+            }
+        }
         private async Task PrepareFood(OrderApiModel order)
         {
             if (recipeManager == null)
@@ -675,6 +725,9 @@ namespace AutoChef.API.Client
                 AddLog("Recipe manager not found. Cannot process food preparation.", LogType.Error);
                 throw new Exception("Recipe manager not found");
             }
+
+            // Track start time for the log
+            DateTime startTime = DateTime.Now;
 
             // Find the target Recipe based on order.RecipeId from the recipeManager's list
             AutoChefRecipeManager.Recipe targetRecipe = null;
@@ -833,6 +886,7 @@ namespace AutoChef.API.Client
                 try
                 {
                     operationLog = recipeManager.GetOperationLog();
+                    
                 }
                 catch (Exception logEx)
                 {
@@ -849,9 +903,18 @@ namespace AutoChef.API.Client
             if (status == "Completed")
             {
                 AddLog($"Recipe for Order {order.OrderId} completed successfully!");
-                AddLog($"Operation log captured ({operationLog.Length} characters)"); // Don't log full content here for brevity
-                                                                                      // Maybe log first/last few lines if needed for debugging:
-                                                                                      // AddLog($"Log Start: {operationLog.Substring(0, Math.Min(operationLog.Length, 100))}");
+                AddLog($"Operation log captured ({operationLog.Length} characters)");
+                operationLog = recipeManager.GetOperationLog();
+                // Post the operation log to the database
+                DateTime endTime = DateTime.Now;
+                await PostOperationLogAsync(
+                    order.OrderId,
+                    order.RobotId,
+                    startTime,
+                    endTime,
+                    status,
+                    operationLog
+                );
             }
             else if (status == "Failed")
             {
