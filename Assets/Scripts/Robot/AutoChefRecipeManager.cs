@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -75,6 +75,44 @@ namespace AutoChef
         private string currentStatus = "Waiting";
         private int globalTaskCounter = 0;
 
+        private void Awake() // Fallsafe
+        {
+            // Manually set recipes if not populated
+            if (recipes == null || recipes.Length == 0)
+            {
+                recipes = new Recipe[]
+                {
+            new Recipe
+            {
+                recipeId = 2,
+                recipeName = "Phở bò",
+                ingredients = new string[]
+                {
+                    "Bánh phở",
+                    "thịt bò",
+                    "hành",
+                    "rau thơm",
+                    "nước dùng"
+                }
+            },
+            new Recipe
+            {
+                recipeId = 6,
+                recipeName = "Phở gà",
+                ingredients = new string[]
+                {
+                    "Bánh phở",
+                    "thịt gà",
+                    "rau thơm",
+                    "nước dùng"
+                }
+            }
+                };
+
+                // Force UI setup after manual population
+                SetupUI();
+            }
+        }
         private void Start()
         {
             // Auto-find references if not set
@@ -86,6 +124,16 @@ namespace AutoChef
             if (robotController == null)
             {
                 robotController = FindObjectOfType<RobotArmController>();
+            }
+            
+            //
+            Debug.Log($"Recipes at Start: {recipes?.Length ?? 0}");
+            if (recipes != null)
+            {
+                for (int i = 0; i < recipes.Length; i++)
+                {
+                    Debug.Log($"Recipe {i}: {recipes[i].recipeName} - Ingredients: {string.Join(", ", recipes[i].ingredients)}");
+                }
             }
 
             // Create lookup dictionary for quick ingredient operations access
@@ -150,10 +198,23 @@ namespace AutoChef
                 }
 
                 // Add click listener
+                //recipeButtons[i].onClick.RemoveAllListeners();
+                //recipeButtons[i].onClick.AddListener(() => {
+                //    ProcessRecipe(recipeIndex);
+                //});
+
+                // Add click listener with detailed logging
                 recipeButtons[i].onClick.RemoveAllListeners();
                 recipeButtons[i].onClick.AddListener(() => {
+                    Debug.Log($"Button clicked - Recipe Index: {recipeIndex}");
+                    Debug.Log($"Recipe Details:");
+                    Debug.Log($"  Name: {recipes[recipeIndex].recipeName}");
+                    Debug.Log($"  ID: {recipes[recipeIndex].recipeId}");
+                    Debug.Log($"  Ingredients: {string.Join(", ", recipes[recipeIndex].ingredients)}");
+
                     ProcessRecipe(recipeIndex);
                 });
+
             }
         }
 
@@ -162,6 +223,16 @@ namespace AutoChef
         /// </summary>
         public void ProcessRecipe(int recipeIndex)
         {
+            // Add these debug logs
+            Debug.Log($"Total recipes: {recipes?.Length ?? 0}");
+            Debug.Log($"Attempting to process recipe at index: {recipeIndex}");
+
+            if (recipes == null || recipeIndex < 0 || recipeIndex >= recipes.Length)
+            {
+                Debug.LogError($"Invalid recipe index: {recipeIndex}");
+                return;
+            }
+
             if (recipeIndex < 0 || recipeIndex >= recipes.Length)
             {
                 Debug.LogError($"Recipe index {recipeIndex} out of range");

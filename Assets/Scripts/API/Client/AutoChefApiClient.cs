@@ -91,7 +91,7 @@ namespace AutoChef.API.Client
             _ = InitializeRecipeDataAsync();
 
             // Start polling for orders
-            StartOrderPolling();
+            //StartOrderPolling();
 
             if (statusText != null)
             {

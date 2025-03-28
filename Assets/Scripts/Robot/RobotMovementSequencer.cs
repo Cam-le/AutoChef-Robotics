@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -66,6 +66,20 @@ public class RobotMovementSequencer : MonoBehaviour
     /// </summary>
     public void AddIngredientToServing(string ingredientName)
     {
+        Debug.Log($"AddIngredientToServing called with: {ingredientName}");
+
+        // Check if ingredient exists in map
+        if (!ingredientMap.ContainsKey(ingredientName))
+        {
+            Debug.LogError($"Ingredient not found in ingredient map: {ingredientName}");
+            Debug.Log("Current ingredient map contains:");
+            foreach (var key in ingredientMap.Keys)
+            {
+                Debug.Log(key);
+            }
+            return;
+        }
+
         if (!isSequenceRunning && ingredientMap.ContainsKey(ingredientName) && servingBowlPosition != null)
         {
             StartCoroutine(PickAndPlaceSequence(ingredientMap[ingredientName], servingBowlPosition));
@@ -197,17 +211,25 @@ public class RobotMovementSequencer : MonoBehaviour
         Dictionary<string, float[]> positionMap = new Dictionary<string, float[]>
         {
         // ServingBowl
-        {"0.49,-1.68,5.94", new float[] {-7.543209f, -74.92943f, 42.8175f, -0.0003111362f, 0, 16.0559f}},
-        // Topping1
-        {"-0.78,-1.64,3.30", new float[] {123.0988f, -32.11256f, -26.7605f, -0.0003111362f, 0, 16.0559f}},
-        // Topping2
-        {"-0.78,-1.64,4.44", new float[] {64.22575f, -37.46447f, -21.40875f, -0.0003111362f, 0, 16.0559f}},
-        // Topping3
-        {"-0.78,-1.64,5.58", new float[] {29.92094f, -53.52084f, 16.0562f, -0.0003111362f, 0, 16.0559f}},
-        // Brooth
-        {"1.26,-2.65,3.43", new float[] {-119.9381f, -37.46432f, -26.7605f, -0.0003111362f, 0, 16.0559f}},
-        // Noodle
-        {"1.22,-2.65,4.88", new float[] {-61.06499f, -37.46432f, -37.46558f, -0.0003111362f, 0, 16.0559f}}
+        {"0.49,-1.68,5.94", new float[] {-4.546044f, -68.19195f, 22.7305f, 0, 0, 0}},
+        
+        // Bánh phở
+        {"1.22,-2.65,4.88", new float[] {-45.46017f, -59.1003f, 4.547074f, 0, 0, 0}},
+        
+        // thịt bò
+        {"-0.78,-1.64,4.44", new float[] {86.37861f, -40.91458f, -27.27603f, 0, 0, 0}},
+        
+        // thịt gà
+        {"-0.78,-1.64,5.57", new float[] {31.8245f, -59.09568f, 22.73101f, 0, 0, 0}},
+        
+        // hành
+        {"-0.78,-1.64,3.30", new float[] {136.3855f, -77.2788f, 13.638f, 0, 0, 0}},
+        
+        // rau thơm
+        {"-0.78,-1.64,3.30", new float[] {136.3855f, -77.2788f, 13.638f, 0, 0, 0}},
+        
+        // nước dùng
+        {"1.26,-2.65,3.43", new float[] {-136.3857f, -77.2788f, 13.638f, 0, 0, 0}},
         };
 
         // Convert position to string key for lookup (rounded to 2 decimal places)
