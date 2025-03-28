@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
+using TMPro;
 
 namespace AutoChef
 {
@@ -58,7 +60,7 @@ namespace AutoChef
         [Header("UI Elements")]
         [SerializeField] private Button[] recipeButtons;
         [SerializeField] private Text statusText;
-        [SerializeField] private TMPro.TextMeshProUGUI operationLogText;
+        [SerializeField] private TextMeshProUGUI operationLogText;
         [SerializeField] private ScrollRect logScrollRect;
 
         [Header("Robot Settings")]
@@ -74,12 +76,14 @@ namespace AutoChef
         private float totalPreparationTime = 0f;
         private string currentStatus = "Waiting";
         private int globalTaskCounter = 0;
+        private bool userIsScrolling = false;
 
         private void Awake() // Fallsafe
         {
             // Manually set recipes if not populated
             if (recipes == null || recipes.Length == 0)
             {
+                Debug.LogError("Recipes could not be found!!!");
                 recipes = new Recipe[]
                 {
             new Recipe
@@ -361,11 +365,10 @@ namespace AutoChef
             {
                 operationLogText.text = operationLog.ToString();
 
-                // Scroll to bottom
-                if (logScrollRect != null)
+                // Only auto-scroll if user isn't manually scrolling
+                if (logScrollRect != null && !userIsScrolling)
                 {
-                    Canvas.ForceUpdateCanvases();
-                    logScrollRect.verticalNormalizedPosition = 0f;
+                    StartCoroutine(ScrollToBottomNextFrame());
                 }
             }
 
@@ -553,12 +556,22 @@ namespace AutoChef
             {
                 operationLogText.text = operationLog.ToString();
 
-                // Scroll to bottom
-                if (logScrollRect != null)
+                // Auto-scroll only if user is NOT dragging
+                if (logScrollRect != null && !userIsScrolling)
                 {
                     Canvas.ForceUpdateCanvases();
-                    logScrollRect.verticalNormalizedPosition = 0f;
+                    StartCoroutine(ScrollToBottomNextFrame()); // Keep this coroutine call
                 }
+            }
+        }
+
+        private IEnumerator ScrollToBottomNextFrame()
+        {
+            // Wait for the end of the frame AFTER the layout has been rebuilt
+            yield return new WaitForEndOfFrame();
+            if (!userIsScrolling && logScrollRect != null) // Double-check userIsScrolling here too
+            {
+                logScrollRect.verticalNormalizedPosition = 0f;
             }
         }
 

@@ -68,6 +68,8 @@ namespace AutoChef.API.Client
         private OrderApiModel currentOrder;
         private List<string> logEntries = new List<string>();
 
+        [SerializeField] private ServingBowlManager servingBowlManager;
+
         void Start()
         {
             httpClient = new HttpClient();
@@ -76,6 +78,12 @@ namespace AutoChef.API.Client
             if (loadConfigFromJson)
             {
                 LoadConfigurationFromJson();
+            }
+
+            // Find servingBowlManager if not set
+            if (servingBowlManager == null)
+            {
+                servingBowlManager = FindObjectOfType<ServingBowlManager>();
             }
 
             // Find recipe manager if not set
@@ -511,6 +519,13 @@ namespace AutoChef.API.Client
         {
             try
             {
+                // Check if we can receive new orders
+                if (servingBowlManager != null && !servingBowlManager.CanReceiveOrders())
+                {
+                    AddLog("Cannot receive new orders right now, bowl is being served", LogType.Log);
+                    return;
+                }
+
                 AddLog("Fetching new orders from API...");
 
                 string url = $"{apiBaseUrl}/{orderQueueEndpoint}";
