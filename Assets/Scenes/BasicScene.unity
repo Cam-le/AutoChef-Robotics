@@ -2114,7 +2114,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 196304800}
-  - component: {fileID: 196304801}
   - component: {fileID: 196304802}
   m_Layer: 0
   m_Name: 'RecipeManager '
@@ -2137,43 +2136,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &196304801
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 196304799}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a9c094f46ff8dde4aa519ec6478414fd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  movementSequencer: {fileID: 1027626630}
-  robotController: {fileID: 1027626628}
-  recipes:
-  - recipeName: PhoBo
-    recipeId: 0
-    ingredients:
-    - Noodle
-    - Topping2
-    - Topping2
-    - Topping1
-    - Brooth
-  - recipeName: PhoGa
-    recipeId: 1
-    ingredients:
-    - Noodle
-    - Topping3
-    - Topping1
-    - Brooth
-  recipeButtons:
-  - {fileID: 1402364676}
-  - {fileID: 1414513419}
-  statusText: {fileID: 1562122046}
-  ingredientButtons: []
-  buttonLabels: []
-  selectedRecipe: 0
 --- !u!114 &196304802
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8670,13 +8632,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8651aca6de90373408c3812b59c33c5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  loadConfigFromJson: 1
+  configurationFile: {fileID: 4900000, guid: 0184124ff69612f4a801fdc7e59747c9, type: 3}
+  configResourcePath: Configs/default_api_config
+  apiBaseUrl: https://autochefsystem.azurewebsites.net/api
+  recipesEndpoint: Recipe/all
+  recipeStepsEndpoint: recipesteps/recipe/{0}
+  robotStepTasksEndpoint: robot-step-tasks
+  orderQueueEndpoint: Order/receive-from-queue
+  orderStatusUpdateEndpoint: Order/update-order-status
+  orderCancellationCheckEndpoint: Order/check-cancelled/{0}
+  maxRetries: 3
+  initialRetryDelayMs: 1000
+  recipePageSize: 20
+  robotStepTasksPageSize: 1000
   pollIntervalSeconds: 5
-  prepareIngredientsTime: 3
-  cookingTime: 25
-  finishingTime: 2
+  logTextArea: {fileID: 0}
+  logScrollRect: {fileID: 0}
+  maxLogLines: 100
   robotArm: {fileID: 0}
   statusText: {fileID: 0}
-  recipeManager: {fileID: 0}
+  recipeManager: {fileID: 196304802}
   useRandomRecipe: 1
 --- !u!114 &1027626630
 MonoBehaviour:
