@@ -17,15 +17,15 @@ public class RobotArmTcpServer : MonoBehaviour
     [SerializeField]
     private int pollIntervalSeconds = 5;
 
-    [Header("Processing Time Simulation")]
-    [SerializeField]
-    private float prepareIngredientsTime = 3.0f;
+    //[Header("Processing Time Simulation")]
+    //[SerializeField]
+    //private float prepareIngredientsTime = 3.0f;
 
-    [SerializeField]
-    private float cookingTime = 5.0f;
+    //[SerializeField]
+    //private float cookingTime = 5.0f;
 
-    [SerializeField]
-    private float finishingTime = 2.0f;
+    //[SerializeField]
+    //private float finishingTime = 2.0f;
 
     [Header("Robot References")]
     [SerializeField]
@@ -313,7 +313,7 @@ public class RobotArmTcpServer : MonoBehaviour
                 // Log updates periodically (every ~5 seconds)
                 if (elapsedTimeMs % 5000 < checkIntervalMs)
                 {
-                    Debug.Log($"Still processing recipe... ({elapsedTimeMs / 1000}s elapsed)");
+                    //Debug.Log($"Still processing recipe... ({elapsedTimeMs / 1000}s elapsed)");
                 }
             }
 
