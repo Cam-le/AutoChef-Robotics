@@ -8,7 +8,7 @@ using System.Threading;
 using UnityEngine.UI;
 using Newtonsoft.Json;
 
-public class RobotArmTcpServer : MonoBehaviour
+public class AutoChefApiClient : MonoBehaviour
 {
     [Header("API Configuration")]
     //[SerializeField]

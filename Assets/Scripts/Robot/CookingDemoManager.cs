@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class CookingDemoManager : MonoBehaviour
 {
     [Header("Robot References")]
-    [SerializeField] private RobotArmTcpServer tcpServer;
+    [SerializeField] private AutoChefApiClient tcpServer;
     [SerializeField] private RobotMovementSequencer movementSequencer;
 
     [Header("Ingredient Setup")]
@@ -33,7 +33,7 @@ public class CookingDemoManager : MonoBehaviour
         // Initialize references if not set in inspector
         if (tcpServer == null)
         {
-            tcpServer = GetComponent<RobotArmTcpServer>();
+            tcpServer = GetComponent<AutoChefApiClient>();
         }
 
         if (movementSequencer == null)
@@ -66,7 +66,7 @@ public class CookingDemoManager : MonoBehaviour
     /// <summary>
     /// Called by the TCP server when a new order is received
     /// </summary>
-    public void ProcessOrder(RobotArmTcpServer.Order order)
+    public void ProcessOrder(AutoChefApiClient.Order order)
     {
         // Only process if we're not already running a sequence
         if (!movementSequencer.IsRunning())
@@ -93,7 +93,7 @@ public class CookingDemoManager : MonoBehaviour
     /// <summary>
     /// Cooking process coroutine
     /// </summary>
-    private IEnumerator CookRecipe(RobotArmTcpServer.Order order, string[] ingredients)
+    private IEnumerator CookRecipe(AutoChefApiClient.Order order, string[] ingredients)
     {
         UpdateStatus($"Starting recipe {order.RecipeId}: {string.Join(", ", ingredients)}");
 
@@ -133,7 +133,7 @@ public class CookingDemoManager : MonoBehaviour
                 // Add new listener
                 demoButtons[i].onClick.AddListener(() => {
                     // Create a simulated order
-                    RobotArmTcpServer.Order demoOrder = new RobotArmTcpServer.Order
+                    AutoChefApiClient.Order demoOrder = new AutoChefApiClient.Order
                     {
                         OrderId = -1, // Negative ID indicates a demo order
                         RecipeId = recipes[recipeIndex].recipeId,
