@@ -263,6 +263,7 @@ namespace AutoChef
             // Generate a new order ID
             currentOrderId++;
 
+
             // Reset operation log and counters
             operationLog.Clear();
             ingredientTaskCounter.Clear();
