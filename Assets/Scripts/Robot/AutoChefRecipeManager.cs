@@ -69,7 +69,7 @@ namespace AutoChef
         private StringBuilder operationLog = new StringBuilder();
         private Dictionary<string, IngredientOperations> operationsLookup = new Dictionary<string, IngredientOperations>();
         private Dictionary<string, int> ingredientTaskCounter = new Dictionary<string, int>();
-        private int currentOrderId = 0;
+        private int currentOrderId = 1;
         private DateTime startTime;
         private float totalPreparationTime = 0f;
         private string currentStatus = "Waiting";
@@ -207,12 +207,9 @@ namespace AutoChef
                 recipeButtons[i].onClick.RemoveAllListeners();
                 recipeButtons[i].onClick.AddListener(() => {
                     Debug.Log($"Button clicked - Recipe Index: {recipeIndex}");
-                    Debug.Log($"Recipe Details:");
-                    Debug.Log($"  Name: {recipes[recipeIndex].recipeName}");
-                    Debug.Log($"  ID: {recipes[recipeIndex].recipeId}");
-                    Debug.Log($"  Ingredients: {string.Join(", ", recipes[recipeIndex].ingredients)}");
-
-                    ProcessRecipe(recipeIndex);
+                    // Pass a dummy Order ID (-1) for manual button presses
+                    int testOrderId = -1;
+                    ProcessRecipe(recipeIndex, testOrderId);
                 });
 
             }
@@ -221,15 +218,17 @@ namespace AutoChef
         /// <summary>
         /// Process a recipe by index
         /// </summary>
-        public void ProcessRecipe(int recipeIndex)
+        public void ProcessRecipe(int recipeIndex, int orderId)
         {
             // Add these debug logs
             Debug.Log($"Total recipes: {recipes?.Length ?? 0}");
-            Debug.Log($"Attempting to process recipe at index: {recipeIndex}");
+            Debug.Log($"Attempting to process recipe index: {recipeIndex} for Order ID: {orderId}");
 
             if (recipes == null || recipeIndex < 0 || recipeIndex >= recipes.Length)
             {
                 Debug.LogError($"Invalid recipe index: {recipeIndex}");
+                UpdateStatus($"Error: Invalid recipe index {recipeIndex}");
+                currentStatus = "Failed"; // Set status to failed
                 return;
             }
 
@@ -242,6 +241,8 @@ namespace AutoChef
             if (movementSequencer == null)
             {
                 Debug.LogError("Movement sequencer not assigned");
+                UpdateStatus("Error: Robot movement system not ready");
+                currentStatus = "Failed"; // Set status to failed
                 return;
             }
 
@@ -253,15 +254,17 @@ namespace AutoChef
 
             Recipe recipe = recipes[recipeIndex];
 
+            this.currentOrderId = orderId;
+
             // Debug the recipe ingredients
-            Debug.Log($"Processing recipe: {recipe.recipeName} with {recipe.ingredients.Length} ingredients:");
+            Debug.Log($"Processing recipe: {recipe.recipeName} (ID: {recipe.recipeId}) with {recipe.ingredients.Length} ingredients for Order ID: {this.currentOrderId}");
             for (int i = 0; i < recipe.ingredients.Length; i++)
             {
                 Debug.Log($"  {i + 1}. {recipe.ingredients[i]}");
             }
 
             // Generate a new order ID
-            currentOrderId++;
+            //currentOrderId++;
 
 
             // Reset operation log and counters
@@ -274,10 +277,11 @@ namespace AutoChef
             totalPreparationTime = 0f;
 
             // Update status
-            UpdateStatus($"Processing recipe: {recipe.recipeName}");
+            string orderIdString = this.currentOrderId > 0 ? $"Order #{this.currentOrderId}" : "Test Order";
+            UpdateStatus($"Processing {orderIdString}: {recipe.recipeName}");
 
             // Begin log entry
-            operationLog.AppendLine($"Robot #{robotId} processing Order #{currentOrderId} ({recipe.recipeName}):");
+            operationLog.AppendLine($"Robot #{robotId} processing {orderIdString} ({recipe.recipeName}):");
 
             // Start the cooking process
             StartCoroutine(ProcessRecipeWithLogging(recipe));
@@ -349,7 +353,8 @@ namespace AutoChef
             totalPreparationTime = (float)(DateTime.Now - recipeStartTime).TotalSeconds;
 
             // Add completion log entry
-            operationLog.AppendLine($"Recipe completed in {FormatTime(totalPreparationTime)} [Success]");
+            string orderIdString = this.currentOrderId > 0 ? $"Order #{this.currentOrderId}" : "Test Order";
+            operationLog.AppendLine($"{orderIdString} completed in {FormatTime(totalPreparationTime)} [Success]");
 
             // Update operation log UI
             if (operationLogText != null)
@@ -366,7 +371,7 @@ namespace AutoChef
 
             // Update the status
             currentStatus = "Completed";
-            UpdateStatus($"Recipe {recipe.recipeName} completed in {FormatTime(totalPreparationTime)}");
+            UpdateStatus($"{orderIdString} ({recipe.recipeName}) completed in {FormatTime(totalPreparationTime)}");
 
             // Re-enable buttons
             SetButtonsInteractable(true);
@@ -465,7 +470,7 @@ namespace AutoChef
             try
             {
                 // Parse the step description to determine the action
-                if (stepDescription.Contains("Move arm to"))
+                if (stepDescription.Contains("Move arm to") || stepDescription.Contains("Di chuyển"))
                 {
                     // This is a movement step
                     if (movementSequencer != null)
@@ -474,7 +479,7 @@ namespace AutoChef
                         yield return new WaitForSeconds(UnityEngine.Random.Range(0.3f, 0.8f) * moveDelayFactor);
                     }
                 }
-                else if (stepDescription.Contains("Pick up"))
+                else if (stepDescription.Contains("Pick up") || stepDescription.Contains("Gắp") || stepDescription.Contains("Múc"))
                 {
                     // This is a pickup step
                     if (robotController != null)
@@ -485,7 +490,7 @@ namespace AutoChef
                         yield return new WaitForSeconds(UnityEngine.Random.Range(0.5f, 1.0f) * moveDelayFactor);
                     }
                 }
-                else if (stepDescription.Contains("Place") || stepDescription.Contains("Pour"))
+                else if (stepDescription.Contains("Place") || stepDescription.Contains("Pour") || stepDescription.Contains("Đặt") || stepDescription.Contains("Đổ"))
                 {
                     // This is a placement step
                     if (movementSequencer != null)

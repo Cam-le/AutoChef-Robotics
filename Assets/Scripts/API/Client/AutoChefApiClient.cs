@@ -676,86 +676,255 @@ namespace AutoChef.API.Client
                 throw new Exception("Recipe manager not found");
             }
 
-            // Get the number of available recipes
-            int recipeCount = 0;
+            // Find the target Recipe based on order.RecipeId from the recipeManager's list
+            AutoChefRecipeManager.Recipe targetRecipe = null;
+            int targetRecipeIndex = -1;
 
-            // Use reflection to get the recipes array length
-            var recipesField = recipeManager.GetType().GetField("recipes",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            // Access the recipes array safely using the helper method
+            var currentRecipes = GetRecipeManagerRecipes();
 
-            if (recipesField != null)
+            if (currentRecipes != null)
             {
-                var recipes = recipesField.GetValue(recipeManager);
-                if (recipes is Array recipesArray)
+                for (int i = 0; i < currentRecipes.Length; i++)
                 {
-                    recipeCount = recipesArray.Length;
+                    // Ensure the recipe at this index is not null before accessing its ID
+                    if (currentRecipes[i] != null && currentRecipes[i].recipeId == order.RecipeId)
+                    {
+                        targetRecipe = currentRecipes[i];
+                        targetRecipeIndex = i;
+                        break;
+                    }
                 }
-            }
-
-            // Determine which recipe to use
-            int recipeId = order.RecipeId;
-
-            // If random recipe is enabled or the received RecipeId is invalid
-            if (useRandomRecipe || recipeId < 0 || recipeId >= recipeCount)
-            {
-                // Select a random recipe
-                recipeId = UnityEngine.Random.Range(0, recipeCount);
-                AddLog($"Using random recipe: {recipeId}");
             }
             else
             {
-                AddLog($"Using specified recipe: {recipeId}");
+                AddLog("Could not retrieve recipes from RecipeManager.", LogType.Warning);
+                // Decide how to proceed - maybe try random if allowed?
             }
 
-            // Process the recipe
-            recipeManager.ProcessRecipe(recipeId);
+            // Determine which recipe index to use
+            int recipeIndexToProcess = -1;
+            int recipeCount = currentRecipes?.Length ?? 0;
 
-            AddLog("Waiting for robot to cook...");
+            if (!useRandomRecipe && targetRecipeIndex != -1)
+            {
+                // Use the specified recipe index if found and not using random
+                recipeIndexToProcess = targetRecipeIndex;
+                // Ensure targetRecipe is not null before accessing its name
+                string recipeName = targetRecipe?.recipeName ?? "Unknown Name";
+                AddLog($"Using specified recipe: ID={order.RecipeId}, Index={recipeIndexToProcess}, Name={recipeName}");
+            }
+            else
+            {
+                // Use random recipe if enabled OR if the specified RecipeId wasn't found OR if recipe list is empty/null
+                if (recipeCount > 0)
+                {
+                    recipeIndexToProcess = UnityEngine.Random.Range(0, recipeCount);
+                    string reason = useRandomRecipe ? "Random recipe enabled" : $"Specified RecipeId {order.RecipeId} not found or invalid";
+                    // Check if targetRecipeIndex was -1 and provide more specific reason
+                    if (!useRandomRecipe && targetRecipeIndex == -1 && currentRecipes != null)
+                    {
+                        reason = $"Specified RecipeId {order.RecipeId} not found among {recipeCount} loaded recipes";
+                    }
+                    else if (currentRecipes == null)
+                    {
+                        reason = "Recipe list unavailable, using random index";
+                    }
+
+                    AddLog($"Using random recipe index: {recipeIndexToProcess} ({reason})");
+                }
+                else
+                {
+                    AddLog("No recipes available in RecipeManager. Cannot prepare food.", LogType.Error);
+                    // Update status immediately and throw exception
+                    //UpdateStatus($"Error: No recipes loaded for Order {order.OrderId}");
+                    throw new Exception($"No recipes available to process order {order.OrderId}.");
+                }
+            }
+
+            // Double-check if recipeIndexToProcess is valid before proceeding
+            if (recipeIndexToProcess < 0 || recipeIndexToProcess >= recipeCount)
+            {
+                AddLog($"Invalid recipe index {recipeIndexToProcess} determined. Cannot proceed with Order {order.OrderId}.", LogType.Error);
+                //UpdateStatus($"Error: Invalid recipe index for Order {order.OrderId}");
+                throw new Exception($"Invalid recipe index determined for Order {order.OrderId}.");
+            }
+
+
+            // Process the recipe using the determined index and the actual Order ID
+            AddLog($"Starting recipe processing for Order ID: {order.OrderId} using Recipe Index: {recipeIndexToProcess}");
+            // --- MODIFIED CALL ---
+            // Ensure recipeManager is still valid before calling
+            if (recipeManager != null)
+            {
+                recipeManager.ProcessRecipe(recipeIndexToProcess, order.OrderId);
+            }
+            else
+            {
+                AddLog($"RecipeManager became unavailable before starting ProcessRecipe for Order {order.OrderId}.", LogType.Error);
+                throw new Exception($"RecipeManager unavailable for Order {order.OrderId}.");
+            }
+            // ---------------------
+
+            AddLog($"Waiting for robot to cook Order {order.OrderId}...");
 
             // Monitor the recipe processing status
-            string status = "";
+            string status = "Starting"; // Initial status before first check
             int checkIntervalMs = 500; // Check every 500ms
             int maxWaitTimeMs = 180000; // Maximum wait time: 3 minutes
             int elapsedTimeMs = 0;
 
             while (elapsedTimeMs < maxWaitTimeMs)
             {
+                // Check recipeManager availability in the loop
+                if (recipeManager == null)
+                {
+                    AddLog($"RecipeManager became unavailable during processing of Order {order.OrderId}.", LogType.Error);
+                    status = "Failed"; // Mark as failed if manager disappears
+                    break;
+                }
+
                 status = recipeManager.GetStatus();
 
-                // Check if processing is complete
+                // Check if processing is complete or failed
                 if (status == "Completed" || status == "Failed")
                 {
                     break;
                 }
 
+                // Update status text for user feedback
+                UpdateStatusText($"Order {order.OrderId}: Cooking... ({elapsedTimeMs / 1000}s / {maxWaitTimeMs / 1000}s) - Status: {status}");
+
+
                 // Wait before checking again
-                await Task.Delay(checkIntervalMs);
+                // Use try-catch for Task.Delay in case cancellation is requested during delay
+                try
+                {
+                    await Task.Delay(checkIntervalMs, cancellationToken?.Token ?? CancellationToken.None);
+                    // Check for cancellation immediately after delay
+                    if (cancellationToken != null && cancellationToken.IsCancellationRequested)
+                    {
+                        AddLog($"Operation cancelled while waiting for recipe completion (Order {order.OrderId}).", LogType.Warning);
+                        status = "Cancelled"; // Or handle as needed
+                        break;
+                    }
+                }
+                catch (TaskCanceledException)
+                {
+                    AddLog($"Task cancelled during delay for Order {order.OrderId}.", LogType.Warning);
+                    status = "Cancelled"; // Or handle as needed
+                    break;
+                }
+
                 elapsedTimeMs += checkIntervalMs;
 
-                // Log updates periodically (every ~5 seconds)
+                // Log progress periodically (e.g., every 5 seconds)
                 if (elapsedTimeMs % 5000 < checkIntervalMs)
                 {
-                    AddLog($"Still processing recipe... ({elapsedTimeMs / 1000}s elapsed)");
+                    AddLog($"Still processing recipe for Order {order.OrderId}... ({elapsedTimeMs / 1000}s elapsed, Status: {status})");
                 }
             }
 
-            if (status == "Completed")
+            // After loop finishes (completion, failure, timeout, or cancellation)
+            // Get operation log regardless of outcome
+            string operationLog = "Log unavailable";
+            if (recipeManager != null)
             {
-                AddLog("Recipe completed successfully!");
-
-                // Get the operation log from recipe manager
-                string operationLog = recipeManager.GetOperationLog();
-                AddLog($"Operation log: {operationLog.Length} characters");
-            }
-            else if (status == "Failed")
-            {
-                AddLog("Recipe processing failed!", LogType.Error);
-                throw new Exception("Recipe processing failed");
+                try
+                {
+                    operationLog = recipeManager.GetOperationLog();
+                }
+                catch (Exception logEx)
+                {
+                    AddLog($"Error getting operation log from RecipeManager: {logEx.Message}", LogType.Warning);
+                }
             }
             else
             {
-                AddLog("Recipe processing timed out!", LogType.Warning);
-                throw new Exception("Recipe processing timed out");
+                operationLog = "Recipe Manager unavailable post-processing.";
+            }
+
+
+            // Handle final status
+            if (status == "Completed")
+            {
+                AddLog($"Recipe for Order {order.OrderId} completed successfully!");
+                AddLog($"Operation log captured ({operationLog.Length} characters)"); // Don't log full content here for brevity
+                                                                                      // Maybe log first/last few lines if needed for debugging:
+                                                                                      // AddLog($"Log Start: {operationLog.Substring(0, Math.Min(operationLog.Length, 100))}");
+            }
+            else if (status == "Failed")
+            {
+                AddLog($"Recipe processing failed for Order {order.OrderId}!", LogType.Error);
+                AddLog($"Failed Operation log captured ({operationLog.Length} characters)");
+                throw new Exception($"Recipe processing failed for Order {order.OrderId}. Final Status: {status}");
+            }
+            else if (status == "Cancelled")
+            {
+                AddLog($"Recipe processing was cancelled for Order {order.OrderId}.", LogType.Warning);
+                // Decide if cancellation should be treated as an error or a specific state
+                // For now, throw exception to indicate it didn't complete normally
+                throw new OperationCanceledException($"Recipe processing cancelled for Order {order.OrderId}.");
+            }
+            else // Timeout case (status wasn't Completed or Failed within maxWaitTimeMs)
+            {
+                AddLog($"Recipe processing timed out for Order {order.OrderId}! (Status: {status})", LogType.Warning);
+                AddLog($"Timeout Operation log captured ({operationLog.Length} characters)");
+                // Optionally force status to Failed if timeout occurs
+                // Consider calling a method on recipeManager to force stop/fail if it exists
+                throw new TimeoutException($"Recipe processing timed out after {maxWaitTimeMs / 1000}s for Order {order.OrderId}. Last known status: {status}");
+            }
+        }
+
+        // ----- HELPER METHODS -----
+
+        /// <summary>
+        /// Safely retrieves the recipes array from the AutoChefRecipeManager.
+        /// Uses reflection as a fallback if a direct getter isn't available.
+        /// </summary>
+        /// <returns>The array of Recipe objects from the manager, or null if unavailable.</returns>
+        private AutoChefRecipeManager.Recipe[] GetRecipeManagerRecipes()
+        {
+            if (recipeManager == null)
+            {
+                AddLog("GetRecipeManagerRecipes called, but RecipeManager is null.", LogType.Warning);
+                return null;
+            }
+
+            // OPTION 1: Ideal - Use a public getter if you add one to AutoChefRecipeManager
+            // Example: if (recipeManager.TryGetRecipes(out var recipes)) { return recipes; }
+            // Example: return recipeManager.GetRecipes(); // If GetRecipes() is added
+
+            // OPTION 2: Reflection (Current implementation, less robust)
+            try
+            {
+                // Cache the FieldInfo for performance if this is called often
+                var recipesField = typeof(AutoChefRecipeManager).GetField("recipes",
+                   System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+                if (recipesField != null)
+                {
+                    var recipesValue = recipesField.GetValue(recipeManager);
+                    if (recipesValue is AutoChefRecipeManager.Recipe[] recipesArray)
+                    {
+                        return recipesArray;
+                    }
+                    else
+                    {
+                        AddLog($"Field 'recipes' in RecipeManager is not of type Recipe[]. Actual type: {recipesValue?.GetType().Name ?? "null"}", LogType.Warning);
+                        return null;
+                    }
+                }
+                else
+                {
+                    AddLog("Could not find private field 'recipes' in RecipeManager via reflection.", LogType.Error);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                AddLog($"Error accessing recipes via reflection: {ex.Message}", LogType.Error);
+                return null; // Return null if reflection fails
             }
         }
 
