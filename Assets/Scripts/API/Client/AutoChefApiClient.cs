@@ -33,16 +33,16 @@ namespace AutoChef.API.Client
         [SerializeField] private string configResourcePath = "Configs/default_api_config";
 
         [Header("API Configuration")]
-        [SerializeField] private string apiBaseUrl = "https://autochefsystem.azurewebsites.net/api";
+        [SerializeField] private string apiBaseUrl = "";
 
         [Header("API Endpoints")]
-        [SerializeField] private string recipesEndpoint = "Recipe/all";
-        [SerializeField] private string recipeStepsEndpoint = "recipesteps/recipe/{0}";
-        [SerializeField] private string robotStepTasksEndpoint = "robot-step-tasks";
-        [SerializeField] private string orderQueueEndpoint = "Order/receive-from-queue";
-        [SerializeField] private string orderStatusUpdateEndpoint = "Order/update-order-status";
-        [SerializeField] private string orderCancellationCheckEndpoint = "Order/check-cancelled/{0}";
-        [SerializeField] private string robotOperationLogsEndpoint = "robot-operation-logs";
+        [SerializeField] private string recipesEndpoint = "";
+        [SerializeField] private string recipeStepsEndpoint = "";
+        [SerializeField] private string robotStepTasksEndpoint = "";
+        [SerializeField] private string orderQueueEndpoint = "";
+        [SerializeField] private string orderStatusUpdateEndpoint = "";
+        [SerializeField] private string orderCancellationCheckEndpoint = "";
+        [SerializeField] private string robotOperationLogsEndpoint = "";
         
         [Header("API Settings")]
         [SerializeField] private int maxRetries = 3;
@@ -251,7 +251,7 @@ namespace AutoChef.API.Client
                 UpdateStatusText("Robot sẵn sàng - đang chờ đơn hàng...");
             }
         }
-
+        #region API DATA FETCHING METHODS
         // ----- API DATA FETCHING METHODS -----
 
         private async Task<List<RecipeApiModel>> FetchRecipesAsync()
@@ -342,6 +342,7 @@ namespace AutoChef.API.Client
             }
         }
 
+        #endregion
         // ----- DATA CONVERSION METHODS -----
 
         private (AutoChefRecipeManager.Recipe[] recipes, AutoChefRecipeManager.IngredientOperations[] operations)
@@ -1165,158 +1166,158 @@ namespace AutoChef.API.Client
 
     // ----- API DATA MODELS -----
 
-    [System.Serializable]
-    public class RecipeApiModel
-    {
-        [JsonProperty("recipeId")]
-        public int RecipeId { get; set; }
+    //[System.Serializable]
+    //public class RecipeApiModel
+    //{
+    //    [JsonProperty("recipeId")]
+    //    public int RecipeId { get; set; }
 
-        [JsonProperty("recipeName")]
-        public string RecipeName { get; set; }
+    //    [JsonProperty("recipeName")]
+    //    public string RecipeName { get; set; }
 
-        [JsonProperty("ingredients")]
-        public string Ingredients { get; set; }
+    //    [JsonProperty("ingredients")]
+    //    public string Ingredients { get; set; }
 
-        [JsonProperty("imageUrl")]
-        public string ImageUrl { get; set; }
+    //    [JsonProperty("imageUrl")]
+    //    public string ImageUrl { get; set; }
 
-        [JsonProperty("description")]
-        public string Description { get; set; }
+    //    [JsonProperty("description")]
+    //    public string Description { get; set; }
 
-        [JsonProperty("isActive")]
-        public bool IsActive { get; set; }
+    //    [JsonProperty("isActive")]
+    //    public bool IsActive { get; set; }
 
-        // Helper method to parse ingredients string to array
-        public string[] GetIngredientsArray()
-        {
-            if (string.IsNullOrEmpty(Ingredients))
-                return new string[0];
+    //    // Helper method to parse ingredients string to array
+    //    public string[] GetIngredientsArray()
+    //    {
+    //        if (string.IsNullOrEmpty(Ingredients))
+    //            return new string[0];
 
-            return Ingredients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(i => i.Trim())
-                .ToArray();
-        }
-    }
+    //        return Ingredients.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+    //            .Select(i => i.Trim())
+    //            .ToArray();
+    //    }
+    //}
 
-    [System.Serializable]
-    public class RecipeStepApiModel
-    {
-        [JsonProperty("stepId")]
-        public int StepId { get; set; }
+    //[System.Serializable]
+    //public class RecipeStepApiModel
+    //{
+    //    [JsonProperty("stepId")]
+    //    public int StepId { get; set; }
 
-        [JsonProperty("recipeId")]
-        public int RecipeId { get; set; }
+    //    [JsonProperty("recipeId")]
+    //    public int RecipeId { get; set; }
 
-        [JsonProperty("stepDescription")]
-        public string StepDescription { get; set; }
+    //    [JsonProperty("stepDescription")]
+    //    public string StepDescription { get; set; }
 
-        [JsonProperty("stepNumber")]
-        public int StepNumber { get; set; }
-    }
+    //    [JsonProperty("stepNumber")]
+    //    public int StepNumber { get; set; }
+    //}
 
-    [System.Serializable]
-    public class RobotStepApiModel
-    {
-        [JsonProperty("stepTaskId")]
-        public int StepTaskId { get; set; }
+    //[System.Serializable]
+    //public class RobotStepApiModel
+    //{
+    //    [JsonProperty("stepTaskId")]
+    //    public int StepTaskId { get; set; }
 
-        [JsonProperty("stepId")]
-        public int StepId { get; set; }
+    //    [JsonProperty("stepId")]
+    //    public int StepId { get; set; }
 
-        [JsonProperty("taskDescription")]
-        public string TaskDescription { get; set; }
+    //    [JsonProperty("taskDescription")]
+    //    public string TaskDescription { get; set; }
 
-        [JsonProperty("taskOrder")]
-        public int TaskOrder { get; set; }
+    //    [JsonProperty("taskOrder")]
+    //    public int TaskOrder { get; set; }
 
-        [JsonProperty("estimatedTime")]
-        public string EstimatedTime { get; set; }
+    //    [JsonProperty("estimatedTime")]
+    //    public string EstimatedTime { get; set; }
 
-        [JsonProperty("repeatCount")]
-        public int RepeatCount { get; set; }
+    //    [JsonProperty("repeatCount")]
+    //    public int RepeatCount { get; set; }
 
-        // Helper method to convert EstimatedTime to seconds
-        public float GetEstimatedTimeInSeconds()
-        {
-            if (TimeSpan.TryParse(EstimatedTime, out TimeSpan timeSpan))
-                return (float)timeSpan.TotalSeconds;
+    //    // Helper method to convert EstimatedTime to seconds
+    //    public float GetEstimatedTimeInSeconds()
+    //    {
+    //        if (TimeSpan.TryParse(EstimatedTime, out TimeSpan timeSpan))
+    //            return (float)timeSpan.TotalSeconds;
 
-            return 1.0f; // Default to 1 second if parsing fails
-        }
-    }
+    //        return 1.0f; // Default to 1 second if parsing fails
+    //    }
+    //}
 
-    [System.Serializable]
-    public class OrderApiModel
-    {
-        [JsonProperty("orderId")]
-        public int OrderId { get; set; }
+    //[System.Serializable]
+    //public class OrderApiModel
+    //{
+    //    [JsonProperty("orderId")]
+    //    public int OrderId { get; set; }
 
-        [JsonProperty("recipeId")]
-        public int RecipeId { get; set; }
+    //    [JsonProperty("recipeId")]
+    //    public int RecipeId { get; set; }
 
-        [JsonProperty("robotId")]
-        public int RobotId { get; set; }
+    //    [JsonProperty("robotId")]
+    //    public int RobotId { get; set; }
 
-        [JsonProperty("locationId")]
-        public int LocationId { get; set; }
+    //    [JsonProperty("locationId")]
+    //    public int LocationId { get; set; }
 
-        [JsonProperty("status")]
-        public string Status { get; set; }
+    //    [JsonProperty("status")]
+    //    public string Status { get; set; }
 
-        [JsonProperty("orderedTime")]
-        public DateTime OrderedTime { get; set; }
-    }
+    //    [JsonProperty("orderedTime")]
+    //    public DateTime OrderedTime { get; set; }
+    //}
 
-    [System.Serializable]
-    public class RecipeListResponse
-    {
-        [JsonProperty("recipes")]
-        public List<RecipeApiModel> Recipes { get; set; } = new List<RecipeApiModel>();
+    //[System.Serializable]
+    //public class RecipeListResponse
+    //{
+    //    [JsonProperty("recipes")]
+    //    public List<RecipeApiModel> Recipes { get; set; } = new List<RecipeApiModel>();
 
-        [JsonProperty("totalCount")]
-        public int TotalCount { get; set; }
+    //    [JsonProperty("totalCount")]
+    //    public int TotalCount { get; set; }
 
-        [JsonProperty("page")]
-        public int Page { get; set; }
+    //    [JsonProperty("page")]
+    //    public int Page { get; set; }
 
-        [JsonProperty("pageSize")]
-        public int PageSize { get; set; }
-    }
+    //    [JsonProperty("pageSize")]
+    //    public int PageSize { get; set; }
+    //}
 
-    [System.Serializable]
-    public class RobotStepTaskListResponse
-    {
-        [JsonProperty("message")]
-        public string Message { get; set; }
+    //[System.Serializable]
+    //public class RobotStepTaskListResponse
+    //{
+    //    [JsonProperty("message")]
+    //    public string Message { get; set; }
 
-        [JsonProperty("data")]
-        public RobotStepTaskResponseData Data { get; set; }
-    }
+    //    [JsonProperty("data")]
+    //    public RobotStepTaskResponseData Data { get; set; }
+    //}
 
-    [System.Serializable]
-    public class RobotStepTaskResponseData
-    {
-        [JsonProperty("tasks")]
-        public List<RobotStepApiModel> Tasks { get; set; } = new List<RobotStepApiModel>();
+    //[System.Serializable]
+    //public class RobotStepTaskResponseData
+    //{
+    //    [JsonProperty("tasks")]
+    //    public List<RobotStepApiModel> Tasks { get; set; } = new List<RobotStepApiModel>();
 
-        [JsonProperty("page")]
-        public int Page { get; set; }
+    //    [JsonProperty("page")]
+    //    public int Page { get; set; }
 
-        [JsonProperty("pageSize")]
-        public int PageSize { get; set; }
-    }
+    //    [JsonProperty("pageSize")]
+    //    public int PageSize { get; set; }
+    //}
 
-    [System.Serializable]
-    public class GenericApiResponse
-    {
-        [JsonProperty("message")]
-        public string Message { get; set; }
-    }
+    //[System.Serializable]
+    //public class GenericApiResponse
+    //{
+    //    [JsonProperty("message")]
+    //    public string Message { get; set; }
+    //}
 
-    [System.Serializable]
-    public class OrderCancellationResponse
-    {
-        [JsonProperty("isCancelled")]
-        public bool IsCancelled { get; set; }
-    }
+    //[System.Serializable]
+    //public class OrderCancellationResponse
+    //{
+    //    [JsonProperty("isCancelled")]
+    //    public bool IsCancelled { get; set; }
+    //}
 }

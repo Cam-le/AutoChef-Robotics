@@ -11,7 +11,7 @@ namespace AutoChef.API.Client
     [Serializable]
     public class AutoChefApiConfig
     {
-        public string ApiBaseUrl = "https://autochefsystem.azurewebsites.net/api";
+        public string ApiBaseUrl = "";
         public ApiEndpointConfig Endpoints = new ApiEndpointConfig();
         public ApiRequestSettings Settings = new ApiRequestSettings();
 
