@@ -11,7 +11,24 @@ namespace AutoChef.API.Client
     [Serializable]
     public class AutoChefApiConfig
     {
-        public string ApiBaseUrl = "https://autochefsystem.azurewebsites.net/api";
+public static AutoChefApiConfig LoadFromJson(string jsonText)
+{
+    try
+    {
+        var config = JsonConvert.DeserializeObject<AutoChefApiConfig>(jsonText);
+        // Validate that required configuration fields are set
+        if (config != null && string.IsNullOrEmpty(config.ApiBaseUrl))
+        {
+            Debug.LogWarning("API base URL is empty in the loaded configuration.");
+        }
+        return config ?? new AutoChefApiConfig();
+    }
+    catch (Exception ex)
+    {
+        Debug.LogError($"Failed to load API config from JSON: {ex.Message}");
+        return new AutoChefApiConfig();
+    }
+}
         public ApiEndpointConfig Endpoints = new ApiEndpointConfig();
         public ApiRequestSettings Settings = new ApiRequestSettings();
 

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using AutoChef.API.Models;
 
 /// <summary>
 /// This script manages a cooking demo by connecting the AutoChefApiClient
